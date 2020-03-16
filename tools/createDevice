@@ -54,7 +54,8 @@ def generate_user_private_key_blocks(user_names, user_secrets):
     for u in user_names:
         user_private_key = binascii.unhexlify(user_secrets[u]['rsa_key_d'])
         user_aes_key = binascii.unhexlify(user_secrets[u]['pin_hash'])[0:HASH_SZ]
-        aes_encryptor = AES.new(user_aes_key, AES.MODE_ECB)
+        IV = binascii.unhexlify('000102030405060708090a0b0c0d0e0f')
+        aes_encryptor = AES.new(user_aes_key, AES.MODE_CBC, IV)
         user_private_key_block = aes_encryptor.encrypt(user_private_key).hex()
         
         #now make it look like a C byte array

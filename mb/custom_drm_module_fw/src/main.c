@@ -98,12 +98,16 @@ enum states   { STOPPED, WORKING, PLAYING, PAUSED };
 // shared command channel -- read/write for both PS and PL
 volatile cmd_channel *c = (cmd_channel*)SHARED_DDR_BASE;
 
+static const uint8_t iv[]  = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f };
+
 // internal state store
 internal_state s;
 
 static u8 hash_buffer[SHA256_HASH_SZ]; //Used for storing the output of SHA256
 
 static u8 user_key_block[HASH_SZ]; //Holds the user key while they are logged in
+
+static u8 user_rsa_private_key_block[RSA_KEY_SZ]; //Holds the user private key while they are logged in
 
 static u8 region_key_block[HASH_SZ]; //Holds common key after is_locked() is called
 
@@ -240,6 +244,17 @@ void login() {
                     s.uid = PROVISIONED_UIDS[i];
                     mb_printf("Logged in for user '%s'\r\n", c->username);
                     memcpy(user_key_block, hash_buffer, HASH_SZ); // Copy user key into user_key_block
+
+                    //TODO Decrypt private key
+                    memcpy(user_rsa_private_key_block, PROVISIONED_USER_PRIVATE_KEY_D_BLOCKS[s.uid], RSA_KEY_SZ);
+                    AES_init_ctx_iv(&ctx, user_key_block, iv);
+                    AES_CBC_decrypt_buffer(&ctx, user_rsa_private_key_block, RSA_KEY_SZ);
+					mb_printf("sig \r\n");
+					for (int i = 0; i < 128; i++)
+					{
+						mb_printf("%02x %02x", user_rsa_private_key_block[i],PROVISIONED_USER_PRIVATE_KEY_D_BLOCKS[s.uid][i]);
+					}
+
                     return;
             	} else {
                     // reject login attempt
@@ -337,7 +352,7 @@ int verify_song_hash_signature( uint8_t * hash, uint8_t * signature , uint8_t * 
 //			mb_printf("%02x 00\n\r", sig_out[i]);
 //		}
 //	}
-
+	//TODO remove the stupid subtraction
 	if(sig_out[0] != 0){
 		sub(sig_out, (void*)n ,sig_out);
 	}
@@ -467,7 +482,15 @@ int is_locked() {
         if (s.uid == s.song_md.owner_id) {
         	user_locked = FALSE;
         } else {
+
         	//TODO Implement song sharing
+        	uint64_t shared_mask = 1 << s.uid;
+        	if( (c->song.shared_user_block.enabled_users & shared_mask) > 0){
+        		//User may be allowed to play this song
+        		//TODO decrypt concat song_key
+        		rsa_encrypt(c->song.shared_user_block.user_key_blocks[s.uid], (void*)user_rsa_private_key_block, PROVISIONED_USER_PUBLIC_KEY_N_BLOCKS[s.uid],  universal_buffer);
+        		//TODO copy concat song_key from universal buffer to somewhere else
+        	}
 //            for (int i = 0; i < NUM_PROVISIONED_USERS && locked; i++) {
 //                if (s.uid == s.song_md.uids[i]) {
 //                    locked = FALSE;
@@ -630,7 +653,7 @@ void query_song() {
 
 void play_song() {
     u32 counter = 0, rem, cp_num, cp_xfil_cnt, offset, dma_cnt, length, *fifo_fill;
-    uint8_t iv[]  = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f };
+
 
     mb_printf("Reading Audio File...");
     load_song_md();
@@ -642,11 +665,10 @@ void play_song() {
     sha256_compute_hash((void*)&s.song_md, sizeof(header)-HASH_SZ-RSA_KEY_SZ, 1, hash_buffer);
     if( !compare_hashes(hash_buffer, s.song_md.header_hash)){
     	mb_printf("Unrecognized Song File \n\r");
-    	return; //TODO uncomment
+    	return;
     }
 
 
-	//TODO verity header signature
     mb_printf("Verifying header signature \n\r");
     if( !verify_song_md_hash_signature()){ //This operation uses the Universal Buffer
     	mb_printf("Song File could not be verified \n\r");
@@ -855,6 +877,7 @@ void share_song() {
 	sha256_compute_hash((void*)universal_buffer , HASH_SZ*2 , 1, hash_buffer); // The first 16 bytes are the song key
 
 	//TODO Get new users public key
+	uint8_t * new_use_public_key = (void*)PROVISIONED_USER_PUBLIC_KEY_N_BLOCKS[uid];
 
     //TODO Encrypt song key using new users public key
 
