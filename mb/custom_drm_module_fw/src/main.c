@@ -643,10 +643,14 @@ void play_song() {
                    PREVIEW_TIME_SEC, PREVIEW_SZ);
     } else {
         mb_printf("Song is unlocked. Playing full song\r\n");
-        //Compute song key by concating user key and common key. Then hashing
+        //TODO implement song sharing
+        //Compute song key by concating user key and song hash. Then hashing. Then concating the output with the common key. And hashing again.
         memcpy(universal_buffer, user_key_block, HASH_SZ);
+        memcpy(universal_buffer+HASH_SZ, s.song_md.song_hash, HASH_SZ);
+        sha256_compute_hash((void*)universal_buffer , HASH_SZ*2 , 1, hash_buffer); 
+        memcpy(universal_buffer, hash_buffer, HASH_SZ); // Copy result of first hash
         memcpy(universal_buffer+HASH_SZ, region_key_block, HASH_SZ);
-        sha256_compute_hash((void*)universal_buffer , HASH_SZ*2 , 1, hash_buffer); // The first 16 bytes are the song key
+        sha256_compute_hash((void*)universal_buffer , HASH_SZ*2 , 1, hash_buffer); // The first 16 bytes are the actual song key
         AES_init_ctx_iv(&ctx, hash_buffer, iv); //Initialize AES_CBC key
         is_truncated = 0;
     }
@@ -812,7 +816,7 @@ void share_song() {
     mb_printf("Generating song key \n\r");
     //Generate song key
     memcpy(universal_buffer, user_key_block, HASH_SZ);
-	memcpy(universal_buffer+HASH_SZ, region_key_block, HASH_SZ);
+	memcpy(universal_buffer+HASH_SZ, c->song.song_header.song_hash, HASH_SZ);
 	sha256_compute_hash((void*)universal_buffer , HASH_SZ*2 , 1, hash_buffer); // The first 16 bytes are the song key
 
 	//TODO Get new users public key
