@@ -35,7 +35,7 @@ from buildMicroblaze import build_microblaze
 from combineBitstream import combine_bitstream
 
 build_flags = ["cs", "cp", "gb", "bm", "cb", "all"]
-proj_name = "cora_z7_07s"
+proj_name = "system_wrapper_hw_platform_0" 
 default_bif = "output.bif"
 input_secrets = "device_secrets"
 output_secrets = "secrets.h"
@@ -58,7 +58,7 @@ def cpy_secrets(device_dir, dev_path_mb):
     """ Copy secrets file to /mb/drm_audio_fw/src/secrets.h """
 
     try:
-        mb_cpy = dev_path_mb + "/drm_audio_fw/src/" + output_secrets
+        mb_cpy = dev_path_mb + "/custom_drm_module_fw/src/" + output_secrets
         secrets = device_dir + "/" + input_secrets
         copy2(secrets, mb_cpy)
         print("Copied %s to\n %s" % (secrets, mb_cpy))
