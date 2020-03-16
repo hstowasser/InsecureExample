@@ -320,39 +320,7 @@ int verify_song_hash_signature( uint8_t * hash, uint8_t * signature , uint8_t * 
 
 	uint8_t * expected = (void*)hash;
 
-//	mb_printf("hash \r\n");
-//	for (int i = 0; i < 16; i++)
-//	{
-//		mb_printf("%02x 00", hash[i]);
-//	}
-//
-//	mb_printf("sig \r\n");
-//	for (int i = 0; i < 128; i++)
-//	{
-//		if( i > 128-16){
-//			mb_printf("%02x %02x", signature[i], expected[i - 128-16]);
-//		}else{
-//			mb_printf("%02x 00", signature[i]);
-//		}
-//	}
-
 	rsa_get_verify_out(sig_out);
-
-//	mb_printf("Before \r\n");
-//	for (int i = 0; i < 128; i++)
-//	{
-//		if( i > 128-16){
-//			mb_printf("%02x %02x\n\r", sig_out[i], expected[i - 128-16]);
-//		}else{
-//			mb_printf("%02x 00\n\r", sig_out[i]);
-//		}
-//	}
-	//TODO remove the stupid subtraction
-	if(sig_out[0] != 0){
-		sub(sig_out, (void*)n ,sig_out);
-	}
-
-
 
 	int ret1 = 1;
 
