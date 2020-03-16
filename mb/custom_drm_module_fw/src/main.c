@@ -113,6 +113,8 @@ static u8 region_key_block[HASH_SZ]; //Holds common key after is_locked() is cal
 
 static u8 universal_buffer[sizeof(song_chunk)];
 
+static u8 rsa_output_buffer[RSA_KEY_SZ];
+
 //////////////////////// INTERRUPT HANDLING ////////////////////////
 
 
@@ -313,25 +315,26 @@ int verify_song_md_hash()
 	return compare_hashes(hash_buffer, s.song_md.header_hash);
 }
 
-int verify_song_hash_signature( uint8_t * hash, uint8_t * signature , uint8_t * key, uint8_t * n)
+// rsa_begin_verify must be called before using this
+int verify_song_hash_signature( uint8_t * hash)//, uint8_t * signature , uint8_t * key, uint8_t * n)
 {
 
-	static u8 sig_out[RSA_KEY_SZ];
+
 
 	uint8_t * expected = (void*)hash;
 
-	rsa_get_verify_out(sig_out);
+	rsa_get_verify_out(rsa_output_buffer);
 
 	int ret1 = 1;
 
 	for(int i = 0; i < RSA_KEY_SZ - HASH_SZ ; i++){
-		if(sig_out[i] != 0){
+		if(rsa_output_buffer[i] != 0){
 			ret1 = 0;
 			break;
 		}
 	}
 	for(int i = 0; i < HASH_SZ ; i++){
-		if(sig_out[i + (RSA_KEY_SZ - HASH_SZ)] != expected[i]){
+		if(rsa_output_buffer[i + (RSA_KEY_SZ - HASH_SZ)] != expected[i]){
 			ret1 = 0;
 			break;
 		}
@@ -343,32 +346,9 @@ int verify_song_hash_signature( uint8_t * hash, uint8_t * signature , uint8_t * 
 
 int verify_song_md_hash_signature()
 {
-	//Must be blocking operation because AES cannot be used with RSA simultaneously
-
-	static u8 sig_out[RSA_KEY_SZ];
-
 	uint8_t * expected = (void*)s.song_md.header_hash;
-
-
-	rsa_encrypt( (void*)s.song_md.hash_signature, (void*)GLOBAL_PUBLIC_E, (void*)GLOBAL_PUBLIC_N,  sig_out);
-
-
-	int ret1 = 1;
-
-	for(int i = 0; i < RSA_KEY_SZ - HASH_SZ ; i++){
-		if(sig_out[i] != 0){
-			ret1 = 0;
-			break;
-		}
-	}
-	for(int i = 0; i < HASH_SZ ; i++){
-		if(sig_out[i + (RSA_KEY_SZ - HASH_SZ)] != expected[i]){
-			ret1 = 0;
-			break;
-		}
-	}
-
-	return ret1;
+	rsa_begin_verify( (void*)s.song_md.hash_signature, (void*)GLOBAL_PUBLIC_E, (void*)GLOBAL_PUBLIC_N);
+	return verify_song_hash_signature( expected );
 }
 
 void print_song_metadata()
@@ -753,7 +733,7 @@ void play_song() {
 
         //TODO DO final checks before playing (Check if signature came back valid)
 		if(chunk_ct < PREVIEW_CHUNK_CT){
-			if( !verify_song_hash_signature( chunk_hash_buffer ,current_chunk->chunk_hash_signature , (void*)GLOBAL_PUBLIC_E, (void*)GLOBAL_PUBLIC_N)){
+			if( !verify_song_hash_signature( chunk_hash_buffer)){
 				print("Chunk signature verification failed \r\n");
 				return;
 			}
