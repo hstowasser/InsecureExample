@@ -343,39 +343,15 @@ int verify_song_hash_signature( uint8_t * hash, uint8_t * signature , uint8_t * 
 
 int verify_song_md_hash_signature()
 {
-	//TODO Implement. Must be blocking operation because AES cannot be used with RSA simultaneously
+	//Must be blocking operation because AES cannot be used with RSA simultaneously
 
-
-	mb_printf("Sig \r\n");
-//	for (int i = 0; i < 128; i++)
-//	{
-//		mb_printf("%02x \n\r", s.song_md.hash_signature[i]);
-//	}
 	static u8 sig_out[RSA_KEY_SZ];
 
 	uint8_t * expected = (void*)s.song_md.header_hash;
 
-//	rsa_begin_verify( (void*)s.song_md.hash_signature, (void*)GLOBAL_PUBLIC_E, (void*)GLOBAL_PUBLIC_N);
-//	rsa_get_verify_out(sig_out);
+
 	rsa_encrypt( (void*)s.song_md.hash_signature, (void*)GLOBAL_PUBLIC_E, (void*)GLOBAL_PUBLIC_N,  sig_out);
 
-
-
-//	mb_printf("After \r\n");
-//	for (int i = 0; i < 128; i++)
-//	{
-//		mb_printf("%02x \n\r", sig_out[i]);
-//	}
-
-	if(sig_out[0] != 0){
-
-		sub(sig_out,(void*)GLOBAL_PUBLIC_N,sig_out);
-//		mb_printf("After \r\n");
-//		for (int i = 0; i < 128; i++)
-//		{
-//			mb_printf("%02x \n\r", sig_out[i]);
-//		}
-	}
 
 	int ret1 = 1;
 
