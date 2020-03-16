@@ -253,8 +253,10 @@ class ProtectedSong(object):
         chunk_ct = 0
         PREVIEW_CT = int(PREVIEW_SZ / CHUNK_SZ)
 
-        concat_key = self.owner_key+self.common_key
-        aes_key = compute_hash(concat_key)
+        concat_song_key = compute_hash(self.owner_key + self.song_hash)
+        aes_key = compute_hash(concat_song_key+self.common_key)
+        #concat_key = self.owner_key+self.common_key
+        #aes_key = compute_hash(concat_key)
         
         out_buffer = []
         out_buffer = bytearray(out_buffer)
