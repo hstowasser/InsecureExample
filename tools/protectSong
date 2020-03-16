@@ -9,12 +9,200 @@ import os
 import wave
 from argparse import ArgumentParser
 import numpy as np
+import hashlib
+from hashlib import sha256, sha1, md5
+from Crypto.PublicKey import RSA
+from Crypto.Cipher import AES
+import binascii
+from Crypto.Util import asn1
+import sys
+from random import randint 
+from global_constants import *
 
+def compute_hash(data):
+    return sha256(data).digest()[0:HASH_SZ]
+
+def protect_chunk__sample(chunk_ct, song_chunk, song_hash, private_key):
+
+    chunk = struct.pack('=I{pad_sz}x{chunk_sz}s{song_hash}s'.format(
+        pad_sz=PAD_SZ,
+        chunk_sz=CHUNK_SZ,
+        song_hash=HASH_SZ),
+        chunk_ct,
+        song_chunk,
+        song_hash)
+
+    chunk_hash = compute_hash(chunk)
+
+    #song_hash_signature = private_key.sign(chunk_hash,'x')[0]
+    hash = int.from_bytes(chunk_hash, byteorder='big')
+    song_hash_signature = pow(hash, private_key[1], private_key[0])
+
+    if( chunk_ct == 0):
+        print("Signature verification failed")
+        print('count ',chunk_ct)
+        print('d= ',private_key[1])
+        print()
+        print('n= ',private_key[0]) # this is n
+        print()
+        print("signature= ",song_hash_signature)
+        print()
+        print('hash= ',hash)
+        print('hash hex= ',chunk_hash.hex())
+    # exit()
+
+    song_hash_signature = song_hash_signature.to_bytes(RSA_KEY_SZ, byteorder='big') #TODO Should 256 be replaced with RSA_KEY_SZ?
+
+    chunk = struct.pack('=I{pad_sz}x{chunk_sz}s{chunk_hash}s{song_hash_signature}s'.format(
+        pad_sz=PAD_SZ,
+        chunk_sz=CHUNK_SZ,
+        chunk_hash=HASH_SZ,
+        song_hash_signature=RSA_KEY_SZ),
+        chunk_ct,
+        song_chunk,
+        chunk_hash,
+        song_hash_signature)
+    return chunk
+
+def protect_chunk__encrypt(chunk_ct, song_chunk, song_hash, data_len, aes_obj):
+    chunk = struct.pack('=I{pad_sz}x{chunk_sz}s{song_hash}s'.format(
+        pad_sz=PAD_SZ,
+        chunk_sz=CHUNK_SZ,
+        song_hash=HASH_SZ),
+        chunk_ct,
+        song_chunk,
+        song_hash)
+    
+
+    chunk_hash = compute_hash(chunk)
+
+    chunk = struct.pack('=I{pad_sz}x{chunk_sz}s{chunk_hash}s{song_hash_signature}x'.format(
+        pad_sz=PAD_SZ,
+        chunk_sz=CHUNK_SZ,
+        chunk_hash=HASH_SZ,
+        song_hash_signature=RSA_KEY_SZ),
+        chunk_ct,
+        song_chunk,
+        chunk_hash
+        )
+    enc = aes_obj.encrypt(chunk)
+
+    return enc
+
+
+
+def create_enabled_regions(regions, user, user_secret_location, region_info, common_key):
+    user_secrets = json.load(open(os.path.abspath(user_secret_location)))
+    region_secrets = json.load(open(os.path.abspath(region_info)))
+    user_pin_hash = binascii.unhexlify(user_secrets[user]['pin_hash'])
+    
+    r = region_secrets['global']['regions']
+    enabled_region_keys = dict()
+    for region_name in regions:
+        region_key = r[region_name]["region_key"]
+        region_num = int(r[region_name]["region"])
+        enabled_region_keys.update({region_num: region_key})
+
+    empty = binascii.unhexlify("00000000000000000000000000000000")
+    region_keys = bytearray()
+    enabled_regions = 0
+    for i in range(0,NUM_REGIONS): #32 is max number of regions
+        if i in enabled_region_keys:
+            enabled_regions += 1<<i # create mask
+            print(enabled_regions)
+            region_key = binascii.unhexlify(enabled_region_keys[i])
+            aes_encryptor = AES.new(region_key, AES.MODE_ECB)
+            key_box = aes_encryptor.encrypt(common_key)
+            region_keys += key_box
+        else:
+            region_keys += empty
+    enabled_regions = struct.pack('=I',enabled_regions)
+    region_keys = enabled_regions + region_keys
+    return region_keys
+
+
+def create_header(regions, user, user_secret_location, region_info, song_size, song_hash, private_key, common_key, song_verify_hash):
+    user_secrets = json.load(open(os.path.abspath(user_secret_location)))
+    region_secrets = json.load(open(os.path.abspath(region_info)))
+    user_pin_hash = binascii.unhexlify(user_secrets[user]['pin_hash'])
+    
+    
+    ownerID = int(user_secrets[user]['id'])
+    
+    enabled_region_block = create_enabled_regions(regions, user, user_secret_location, region_info, common_key)
+
+    metadata = struct.pack('=BxxxI{enabled_region_block}s{song_hash}s{song_verify_hash}s'.format(
+        enabled_region_block=4+HASH_SZ*NUM_REGIONS, # 4 is size of int
+        song_hash=HASH_SZ,
+        song_verify_hash=SONG_VERIFY_HASH_SZ,
+        ),
+        ownerID, 
+        song_size, 
+        enabled_region_block, 
+        song_hash,
+        song_verify_hash)
+
+    
+
+    header_hash = compute_hash(metadata)
+
+    #hash_signature = private_key.sign(header_hash,'x')[0]
+    hash = int.from_bytes(header_hash, byteorder='big')
+    hash_signature = pow(hash, private_key[1], private_key[0])
+
+
+    sig = hash_signature.to_bytes(RSA_KEY_SZ, byteorder='big')
+
+    metadata = struct.pack('=BxxxI{enabled_region_block}s{song_hash}s{song_verify_hash}s{header_hash}s{hash_signature}s'.format(
+        enabled_region_block=4+HASH_SZ*NUM_REGIONS, # 4 is size of int
+        song_hash=HASH_SZ,
+        song_verify_hash=SONG_VERIFY_HASH_SZ,
+        header_hash=HASH_SZ,
+        hash_signature=RSA_KEY_SZ
+        ),
+        ownerID, 
+        song_size, 
+        enabled_region_block, 
+        song_hash,
+        song_verify_hash,
+        header_hash,
+        sig)
+
+    metadata_data_size = len(metadata)
+    if ( metadata_data_size != HEADER_SZ):
+        print("ERROR Header Size :", metadata_data_size)
+        print("expected ", HEADER_SZ)
+        print("enabled_region_block", len(enabled_region_block))
+        print("song_hash", len(song_hash))
+        print("header_hash", len(header_hash))
+        print("hash_signature", len(sig))
+    debug = True
+    if( debug):
+        print("Owner Id", ownerID)
+        print("song_size", song_size)
+        print("song_verify_hash", song_verify_hash.hex())
+        print("song_hash", song_hash.hex())
+        print("header_hash", len(header_hash))
+        print("song_signature", sig.hex())
+
+
+
+    return metadata
+
+def parse_header(metadata):
+    ownerID, song_size, enabled_region_block, song_hash, song_verify_hash, header_hash, sig  = struct.unpack('=BxxxI{enabled_region_block}s{song_hash}s{song_verify_hash}s{header_hash}s{hash_signature}s'.format(
+        enabled_region_block=ENABLED_REGION_BLOCK_SZ,
+        song_hash=HASH_SZ,
+        song_verify_hash=SONG_VERIFY_HASH_SZ,
+        header_hash=HASH_SZ,
+        hash_signature=RSA_KEY_SZ
+        ), metadata)
+    return ownerID, song_size, enabled_region_block, song_hash, song_verify_hash,header_hash, sig
 
 class ProtectedSong(object):
     """Example song object for protected song"""
 
-    def __init__(self, path_to_song, metadata):
+    def __init__(self, path_to_song, region_list, owner, user_secrets_path, region_secrets_path, song_hash, private_key, owner_key, common_key):
         """initialize values
         Args:
             path_to_song (string): file name where the song to be provisioned is stored
@@ -22,22 +210,129 @@ class ProtectedSong(object):
         """
         self.song = path_to_song
         self.full_song, self.original_song = self.read_song(path_to_song)
-        self.metadata = metadata
+        self.song_hash = song_hash
+        self.private_key = private_key
+        self.owner = owner
+        self.owner_key = owner_key[0:HASH_SZ]
+        self.common_key = common_key[0:HASH_SZ]
+        self.user_secrets_path = user_secrets_path
+        self.region_secrets_path = region_secrets_path
+        self.region_list = region_list
+
 
     def save_secured_song_to_wave(self, file_location):
         """Saves secured song to wave file assuming all the same characteristics as original song
         Args:
             file_location (string): location to store the file including name"""
-        protected_wav = wave.open(os.path.abspath(file_location), 'wb')
+        #protected_wav = wave.open(os.path.abspath(file_location), 'wb')
+        tem_name = "temp.wav"
+        protected_wav = wave.open(os.path.abspath(tem_name), 'wb')
         protected_wav.setnchannels(self.original_song.getnchannels())
         protected_wav.setsampwidth(self.original_song.getsampwidth())
         protected_wav.setframerate(self.original_song.getframerate())
-        protected_wav.writeframes(self.metadata)
+        #protected_wav.writeframes(self.metadata)
 
         for val in self.full_song:
-            protected_wav_val = struct.pack('<h', val)
-            protected_wav.writeframesraw(protected_wav_val)
+             protected_wav_val = struct.pack('<h', val)
+             protected_wav.writeframesraw(protected_wav_val)
 
+        protected_wav.close()
+
+
+        temp_wav = open("temp.wav","rb")
+        full_song_bytes = temp_wav.read()
+        full_song_bytes = bytes(full_song_bytes)
+        temp_wav.close()
+        os.remove(os.path.abspath(tem_name)) #cleanup temp
+
+        
+
+
+        length = len(full_song_bytes)
+        remaining = len(full_song_bytes)
+        chunk_ct = 0
+        PREVIEW_CT = int(PREVIEW_SZ / CHUNK_SZ)
+
+        concat_key = self.owner_key+self.common_key
+        aes_key = compute_hash(concat_key)
+        
+        out_buffer = []
+        out_buffer = bytearray(out_buffer)
+
+        IV = binascii.unhexlify('000102030405060708090a0b0c0d0e0f')
+        aes_obj = AES.new(aes_key, AES.MODE_CBC, IV)
+        current = length - remaining
+        while remaining > CHUNK_SZ:
+            current = length - remaining
+            if(chunk_ct < PREVIEW_CT): 
+                #preview
+                chunk = protect_chunk__sample(chunk_ct, full_song_bytes[current:(current+CHUNK_SZ)], self.song_hash, self.private_key)
+            else:
+                #other
+                chunk = protect_chunk__encrypt(chunk_ct, full_song_bytes[current:(current+CHUNK_SZ)], self.song_hash, CHUNK_SZ, aes_obj)
+            chunk_ct+=1
+            remaining-=CHUNK_SZ
+            for i in range(0,len(chunk),2):
+                protected_wav_val = struct.pack('<BB', chunk[i], chunk[i+1])
+                #protected_wav.write(protected_wav_val)
+                out_buffer+=(protected_wav_val)
+            
+        #$Generate 32mb file
+        # while(chunk_ct < 2000):
+        #     for i in range(0,len(chunk),2):
+        #         protected_wav_val = struct.pack('<BB', chunk[i], chunk[i+1])
+        #         #protected_wav.write(protected_wav_val)
+        #         out_buffer+=(protected_wav_val)
+        #     chunk_ct+=1
+
+        #Generate 128mb file
+        # while(chunk_ct < 8000):
+        #     for i in range(0,len(chunk),2):
+        #         protected_wav_val = struct.pack('<BB', chunk[i], chunk[i+1])
+        #         #protected_wav.write(protected_wav_val)
+        #         out_buffer+=(protected_wav_val)
+        #     chunk_ct+=1
+
+
+        print("Chunk SZ",len(chunk))
+        #handle last chunk
+        last_chunk = bytes(full_song_bytes[current:(current+remaining)])
+
+        while( len(last_chunk) < CHUNK_SZ): #Pad last chunk
+            last_chunk += bytes(randint(0, 255))
+
+        if remaining > 0:
+            chunk = protect_chunk__encrypt(chunk_ct, bytes(last_chunk), self.song_hash, CHUNK_SZ, aes_obj)
+
+        for i in range(0,len(chunk),2):
+                protected_wav_val = struct.pack('<BB', chunk[i], chunk[i+1])
+                #protected_wav.write(protected_wav_val)
+                out_buffer+=(protected_wav_val)
+
+        protected_wav = open(os.path.abspath(file_location), "wb")
+        #TODO Add song_verify_hash to metadata
+        print("out_buffer length: ",len(out_buffer))
+        if SONG_VERIFY_HASH_ALGORITHM == USE_MD5:
+            song_verify_hash = md5(out_buffer).digest()[0:SONG_VERIFY_HASH_SZ]
+        elif SONG_VERIFY_HASH_ALGORITHM == USE_SHA1:
+            song_verify_hash = sha1(out_buffer).digest()[0:SONG_VERIFY_HASH_SZ]
+        else:
+            song_verify_hash = sha256(out_buffer).digest()[0:SONG_VERIFY_HASH_SZ]
+        print(song_verify_hash.hex())
+        metadata = create_header(self.region_list, self.owner, self.user_secrets_path, self.region_secrets_path, length, self.song_hash, self.private_key, self.common_key, song_verify_hash)
+        protected_wav.write(bytes(metadata))
+
+        # Generate empty song sharing header
+        song_sharing_header = []
+        song_sharing_header = bytearray(song_sharing_header)
+        for i in range(0,SONG_SHARING_HEADER_SZ):
+            song_sharing_header.append(0)
+        print(len(song_sharing_header))
+        print(SONG_SHARING_HEADER_SZ)
+        
+        protected_wav.write(bytes(song_sharing_header))
+
+        protected_wav.write(bytes(out_buffer))
         protected_wav.close()
 
     def read_song(self, path, metadata_frames=0):
@@ -57,31 +352,9 @@ class ProtectedSong(object):
         return vals, song
 
 
-def create_metadata(regions, user, user_secret_location, region_info):
-    """Returns a byte string formatted as follows:
-    METADATA_LENGTH(1B)/ownerID(1B)/REGION_LEN(1B)/USER_LEN(1B)/REGIONID1(1B)/REGIONID2 (1B)/.../opt. parity
-    Args:
-        regions (list): list of regions to provision song for
-        user (string): user name for owner of the song
-        user_secret_location (string): path to user secrets file
-        region_info (dict): mapping of regions provided by region_information.json
-    Returns:
-        metadata (bytes): bytes of encoded metadata
-    Example:
-        >>create_metadata(['USA', 'Canada'], 'user1', 'user_secrets.json', {'USA': 1, 'Canada':2})
-        'x06/x00/x01/x00/x01/x02'
-    """
-    user_secrets = json.load(open(os.path.abspath(user_secret_location)))
 
-    # note: metadata must be an even length since each sample is 2B long
-    # and ARM processors require memory accesses to be aligned to the type size
-    metadata = struct.pack(
-        '=3B{regions_length}s{regions_len_2}s'.format(regions_length=len(regions), regions_len_2=len(regions) % 2),
-        int(user_secrets[user]['id']), len(regions), 0,
-        bytes([region_info[str(r)] for r in regions]),
-        b'\x00' if len(regions) % 2 else b'')
 
-    return bytes([len(metadata) + 1]) + metadata
+
 
 
 def main():
@@ -96,13 +369,34 @@ def main():
     args = parser.parse_args()
 
     regions = json.load(open(os.path.abspath(args.region_secrets_path)))
-    try:
-        metadata = create_metadata(args.region_list, args.owner, args.user_secrets_path, regions)
-    except ValueError:
-        raise ValueError('Ensure all user IDs are integers and all regions are in the provided region_information.json')
-    protected_song = ProtectedSong(args.infile, metadata)
+
+    #song_size = os.stat(os.path.abspath(args.infile)).st_size
+
+    song_hash = os.urandom(HASH_SZ)
+
+    keyPair = RSA.generate(1024, os.urandom)
+    keyPair.n = int.from_bytes(binascii.unhexlify(regions["global"]["global_key_n"]), byteorder='big', signed=False)
+    keyPair.e = int.from_bytes(binascii.unhexlify(regions["global"]["global_key_e"]), byteorder='big', signed=False)
+    keyPair.d = int.from_bytes(binascii.unhexlify(regions["global"]["global_key_d"]), byteorder='big', signed=False)
+
+    # print("N ", keyPair.n)
+    # exit()
+    keyPriv = [keyPair.n, keyPair.d]
+    common_key = os.urandom(HASH_SZ)
+
+    user_secrets = json.load(open(os.path.abspath(args.user_secrets_path)))
+    owner_key = binascii.unhexlify(user_secrets[args.owner]["pin_hash"])
+
+
+    # try:
+    #     metadata = create_header(args.region_list, args.owner, args.user_secrets_path, args.region_secrets_path, song_size, song_hash, keyPriv, common_key)
+    # except ValueError:
+    #     raise ValueError('Ensure all user IDs are integers and all regions are in the provided region_information.json')
+    #protected_song = ProtectedSong(args.infile, metadata,song_hash, keyPriv, owner_key, common_key)
+    protected_song = ProtectedSong(args.infile,args.region_list, args.owner, args.user_secrets_path, args.region_secrets_path,song_hash, keyPriv, owner_key, common_key)
     protected_song.save_secured_song_to_wave(args.outfile)
 
 
 if __name__ == '__main__':
     main()
+
