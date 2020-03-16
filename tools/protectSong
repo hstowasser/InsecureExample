@@ -296,13 +296,17 @@ class ProtectedSong(object):
         #     chunk_ct+=1
 
 
-        print("Chunk SZ",len(chunk))
+        
         #handle last chunk
-        last_chunk = bytes(full_song_bytes[current:(current+remaining)])
+        current = length - remaining
+        last_chunk = bytearray(full_song_bytes[current:(current+remaining)])
+        print("Chunk SZ",len(last_chunk))
 
         while( len(last_chunk) < CHUNK_SZ): #Pad last chunk
-            last_chunk += bytes(randint(0, 255))
+            last_chunk.append( (randint(0, 255)) )
 
+        last_chunk = bytes(last_chunk)
+        print("Chunk SZ",len(last_chunk))
         if remaining > 0:
             chunk = protect_chunk__encrypt(chunk_ct, bytes(last_chunk), self.song_hash, CHUNK_SZ, aes_obj)
 

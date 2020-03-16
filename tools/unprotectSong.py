@@ -58,7 +58,7 @@ def unprotect_chunk__sample(song_chunk, song_hash, public_key):
 
     #hash_signature_out = public_key.verify(chunk_hash,[(hash_signature),0])
 
-    hash_signature_out = 0
+    
     if hash_signature_out != chunk_hash_int:
         print("Signature verification failed")
         print('count ',chunk_ct)
@@ -154,6 +154,7 @@ class unProtectedSong(object):
         chunk_ct = 0
 
         remaining_decoded = self.song_size
+        print("remaining_decoded", remaining_decoded)
 
         current = length - remaining
 
@@ -205,6 +206,7 @@ class unProtectedSong(object):
         if remaining > 0:
             chunk = unprotect_chunk__encrypt(data[current:(current+ENC_CHUNK_SZ)], self.song_hash, aes_obj)
 
+        print(remaining_decoded)
         fout.write(chunk[0:remaining_decoded])
 
             
@@ -316,7 +318,7 @@ def main():
 
     regions = json.load(open(os.path.abspath(args.region_secrets_path)))
 
-    song_size = os.stat(os.path.abspath(args.infile)).st_size
+    #song_size = os.stat(os.path.abspath(args.infile)).st_size
     
     
     # global_private_key = binascii.unhexlify(regions["global"]["global_private"])
