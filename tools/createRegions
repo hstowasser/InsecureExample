@@ -5,6 +5,10 @@ Use: Once per ecosystem of devices
 """
 import json
 from argparse import ArgumentParser
+from Crypto.PublicKey import RSA
+from Crypto import Random
+import os
+from global_constants import *
 
 
 def main(region_dict, file_name):
@@ -31,5 +35,13 @@ def get_args():
 if __name__ == '__main__':
     region_list, outfile = get_args()
     print("generating system specific secrets")
-    regions = {region: num for num, region in enumerate(region_list)}  # Create region IDs based on increasing integers
+    global_key = RSA.generate(RSA_KEY_SZ_BITS, os.urandom)
+    n_bytes = global_key.n.to_bytes(RSA_KEY_SZ, 'big')
+    e_bytes = global_key.e.to_bytes(RSA_KEY_SZ, 'big')
+    d_bytes = global_key.d.to_bytes(RSA_KEY_SZ, 'big')
+    #public_key = global_key.publickey().exportKey("DER") 
+    #private_key = global_key.exportKey("DER") 
+    #user_dict = {user.split(":")[0]: {"pin": user.split(":")[1], "pin_hash": hex(hashlib.sha256(user.split(":")[1].encode()).digest()), "id": num} for num, user in enumerate(user_list)}
+    regionsy = {region: { 'region':num, 'region_key': os.urandom(HASH_SZ).hex()} for num, region in enumerate(region_list)}  # Create region IDs based on increasing integers
+    regions = { "global" : { "global_key_n" : n_bytes.hex(), "global_key_e" : e_bytes.hex(),"global_key_d" : d_bytes.hex(), 'regions' :  regionsy}}
     main(regions, outfile)

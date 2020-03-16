@@ -5,12 +5,65 @@ Use: Once per device
 """
 import os
 import json
+import binascii
 from argparse import ArgumentParser
+from Crypto.Cipher import AES
+from global_constants import *
 
+def format_hex_to_c_byte_array( hex_string):
+    formatted_string = " {"
+    for i in range(0,len(hex_string),2): 
+        if(i != 0):
+            formatted_string += ', '
+        formatted_string += '0x' + hex_string[i:i+2]
+    formatted_string += " } \n"
+    return formatted_string
 
+#This encrypts (w/AES) the device_hash with each users key
+# these blocks will be used to verify the users login
+def generate_user_blocks(user_names, user_secrets, device_hash):
+    user_block_list = []
+    for u in user_names:
+        user_key = binascii.unhexlify(user_secrets[u]['pin_hash'])[0:HASH_SZ]
+        aes_encryptor = AES.new(user_key, AES.MODE_ECB)
+        user_block = aes_encryptor.encrypt(device_hash).hex()
+        
+        #now make it look like a C byte array
+        formatted_string = " {"
+        i = 0
+        for i in range(0,len(user_block),2): 
+            if(i != 0):
+                formatted_string += ', '
+            formatted_string += '0x' + user_block[i:i+2]
+        formatted_string += " } \n"
+        user_block_list.append(formatted_string)
+    return user_block_list
 
-def main(region_names, user_names, user_secrets, region_secrets, device_dir):
-    file_name = "device_secrets"
+def generate_user_public_key_blocks(user_names, user_secrets):
+    user_block_list = []
+    for u in user_names:
+        user_public_key = user_secrets[u]['rsa_key_n']
+        
+        #now make it look like a C byte array
+        formatted_string = format_hex_to_c_byte_array(user_public_key)
+        user_block_list.append(formatted_string)
+    return user_block_list
+
+def generate_user_private_key_blocks(user_names, user_secrets):
+    user_block_list = []
+    for u in user_names:
+        user_private_key = binascii.unhexlify(user_secrets[u]['rsa_key_d'])
+        user_aes_key = binascii.unhexlify(user_secrets[u]['pin_hash'])[0:HASH_SZ]
+        aes_encryptor = AES.new(user_aes_key, AES.MODE_ECB)
+        user_private_key_block = aes_encryptor.encrypt(user_private_key).hex()
+        
+        #now make it look like a C byte array
+        formatted_string = format_hex_to_c_byte_array(user_private_key_block)
+        user_block_list.append(formatted_string)
+    return user_block_list
+
+def main(region_names, user_names, user_secrets, region_secrets, device_dir, device_hash):
+    file_name = "device_secrets.h"
 
     # create device directory
     try:
@@ -28,7 +81,7 @@ def main(region_names, user_names, user_secrets, region_secrets, device_dir):
 
     # check for valid region names
     try:
-        rids = [str(region_secrets[r]) for r in region_names]
+        rids = [str(region_secrets["global"]["regions"][r]["region"]) for r in region_names]
     except Exception as e:
         print("Unable to create secrets file: {e} "
               "Please ensure all regions entered are in the list: {user_secrets}".format(e=e, user_secrets=user_secrets.keys()))
@@ -42,14 +95,49 @@ def main(region_names, user_names, user_secrets, region_secrets, device_dir):
               "Please ensure all regions entered are in the list: {user_secrets}".format(e=e, user_secrets=user_secrets.keys()))
         return
 
+    formatted_key_strings = []
+    for r in region_secrets["global"]["regions"]:
+        key_string = region_secrets["global"]["regions"][r]["region_key"]
+        formatted_string = " {"
+        i = 0
+        for i in range(0,len(key_string),2):
+            if(i != 0):
+                formatted_string += ', '
+
+            formatted_string += '0x' + key_string[i:i+2]
+        formatted_string += " } \n"
+        formatted_key_strings.append(formatted_string)
+
+    formatted_device_hash = " {"
+    device_hash_string = device_hash.hex()
+    i = 0
+    for i in range(0,len(device_hash_string),2):
+        if(i != 0):
+            formatted_device_hash += ', '
+
+        formatted_device_hash += '0x' + device_hash_string[i:i+2]
+    formatted_device_hash += " } \n"
+
+            
+    formatted_user_block_strings = generate_user_blocks(user_names, user_secrets, device_hash)
+    formatted_user_public_key_block_strings = generate_user_public_key_blocks(user_names, user_secrets)
+    formatted_user_private_key_block_strings = generate_user_private_key_blocks(user_names, user_secrets)
     # write secrets
     device_secrets.write(f'''
 #ifndef SECRETS_H
 #define SECRETS_H
 
-#define NUM_REGIONS {len(region_secrets)}
-const char *REGION_NAMES[] = {{ {", ".join(['"' + r + '"' for r in region_secrets])} }};
-const u8 REGION_IDS[] = {{ {", ".join([str(r) for r in region_secrets.values()])} }};
+#define KEY_LEN 16
+#define RSA_KEY_SZ {RSA_KEY_SZ}
+#define NUM_REGIONS {len(region_secrets["global"]["regions"])}
+const char *REGION_NAMES[] = {{ {", ".join(['"' + r + '"' for r in region_secrets["global"]["regions"]])} }};
+const u8 REGION_IDS[] = {{ {", ".join([str(region_secrets["global"]["regions"][r]["region"]) for r in region_secrets["global"]["regions"]])} }};
+const u8 REGION_KEYS[NUM_REGIONS][KEY_LEN] = {{ {", ".join([ r for r in formatted_key_strings])} }};
+
+const u8 GLOBAL_PUBLIC_N[] = {format_hex_to_c_byte_array(region_secrets["global"]["global_key_n"])};
+const u8 GLOBAL_PUBLIC_E[] = {format_hex_to_c_byte_array(region_secrets["global"]["global_key_e"])};
+
+const u8 DEVICE_HASH[] = { formatted_device_hash };
 
 #define NUM_PROVISIONED_REGIONS {len(region_names)}
 const u8 PROVISIONED_RIDS[] = {{ {", ".join(rids)} }};
@@ -60,8 +148,11 @@ const u8 USER_IDS[] = {{ {", ".join([str(user_secrets[u]['id']) for u in user_na
 
 #define NUM_PROVISIONED_USERS {len(user_names)}
 const u8 PROVISIONED_UIDS[] = {{ {", ".join(uids)} }};
-const char *PROVISIONED_PINS[] = {{ {", ".join(['"' + user_secrets[u]['pin'] + '"' for u in user_names])} }};
+const u8 PROVISIONED_USER_KEY_BLOCKS[NUM_PROVISIONED_USERS][KEY_LEN] = {{ {", ".join([ r for r in formatted_user_block_strings])} }};
 
+const u8 PROVISIONED_USER_PUBLIC_KEY_N_BLOCKS[NUM_PROVISIONED_USERS][RSA_KEY_SZ] = {{ {", ".join([ r for r in formatted_user_public_key_block_strings])} }};
+
+const u8 PROVISIONED_USER_PRIVATE_KEY_D_BLOCKS[NUM_PROVISIONED_USERS][RSA_KEY_SZ] = {{ {", ".join([ r for r in formatted_user_private_key_block_strings])} }};
 #endif // SECRETS_H
 ''')
 
@@ -84,6 +175,8 @@ def get_args():
 if __name__ == '__main__':
     region_names, region_secrets, usernames, user_secrets, device_dir = get_args()
     print("generating device specific secrets")
+    device_hash = os.urandom(16)
+
     user_secrets = json.load(open(os.path.abspath(user_secrets)))
     region_secrets = json.load(open(os.path.abspath(region_secrets)))
-    main(region_names, usernames, user_secrets, region_secrets, device_dir)
+    main(region_names, usernames, user_secrets, region_secrets, device_dir, device_hash)

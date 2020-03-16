@@ -6,6 +6,11 @@ Use: Once per user
 
 import json
 from argparse import ArgumentParser
+import hashlib
+import os
+from Crypto.PublicKey import RSA
+from global_constants import *
+
 
 
 def main(user_list, outfile):
@@ -20,7 +25,27 @@ def main(user_list, outfile):
         return 0
 
     try:
-        user_dict = {user.split(":")[0]: {"pin": user.split(":")[1], "id": num} for num, user in enumerate(user_list)}
+        first = True
+        for num, user in enumerate(user_list):
+            # Generate RSA Keys
+            user_key = RSA.generate(RSA_KEY_SZ_BITS, os.urandom)
+            n_bytes = user_key.n.to_bytes(RSA_KEY_SZ, 'big')
+            e_bytes = user_key.e.to_bytes(RSA_KEY_SZ, 'big')
+            d_bytes = user_key.d.to_bytes(RSA_KEY_SZ, 'big')
+            #public_key = user_key.publickey().exportKey("DER") 
+            #private_key = user_key.exportKey("DER")
+            user_d = {user.split(":")[0]: {"pin": user.split(":")[1], 
+                "pin_hash": hashlib.sha256(user.split(":")[1].encode()).digest().hex(), 
+                "rsa_key_n": n_bytes.hex(),
+                "rsa_key_e": e_bytes.hex(),
+                "rsa_key_d": d_bytes.hex(),
+                "id": num} }
+            if first:
+                user_dict = user_d
+                first = False
+            else:
+                user_dict.update(user_d)
+        #user_dict = {user.split(":")[0]: {"pin": user.split(":")[1], "pin_hash": hex(hashlib.sha256(user.split(":")[1].encode()).digest()), "id": num} for num, user in enumerate(user_list)}
     except IndexError:
         raise Exception(
             "Unable to parse user name and pin. Please make sure you entered the user-list as "
