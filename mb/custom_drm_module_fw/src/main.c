@@ -245,16 +245,10 @@ void login() {
                     mb_printf("Logged in for user '%s'\r\n", c->username);
                     memcpy(user_key_block, hash_buffer, HASH_SZ); // Copy user key into user_key_block
 
-                    //TODO Decrypt private key
+                    //Decrypt private key
                     memcpy(user_rsa_private_key_block, PROVISIONED_USER_PRIVATE_KEY_D_BLOCKS[s.uid], RSA_KEY_SZ);
                     AES_init_ctx_iv(&ctx, user_key_block, iv);
                     AES_CBC_decrypt_buffer(&ctx, user_rsa_private_key_block, RSA_KEY_SZ);
-					mb_printf("sig \r\n");
-					for (int i = 0; i < 128; i++)
-					{
-						mb_printf("%02x %02x", user_rsa_private_key_block[i],PROVISIONED_USER_PRIVATE_KEY_D_BLOCKS[s.uid][i]);
-					}
-
                     return;
             	} else {
                     // reject login attempt
@@ -284,6 +278,7 @@ void logout() {
         memset((void*)c->username, 0, USERNAME_SZ);
         memset((void*)c->pin, 0, MAX_PIN_SZ);
         memset((void*)user_key_block, 0,HASH_SZ); //Delete user key
+        memset((void*)user_rsa_private_key_block, 0,  RSA_KEY_SZ); //Delete use private key
         memset((void*)hash_buffer, 0, SHA256_HASH_SZ);
         s.uid = 0;
     } else {
