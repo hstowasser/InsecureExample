@@ -594,18 +594,9 @@ void play_song() {
     length = s.song_md.song_size;
     mb_printf("Song length = %d", length);
 
-    //Verify song_verify_hash TODO move to later in the pipeline for increased speed
-    mb_printf("Verify song integrity \n\r");
-    while(c->song_length == 0){} //Wait for Zynq to process hash
+    //Verify song_verify_hash. Raise the flag to high.
+    uint8_t verify_song_hash_flag = 1;
 
-    int plus_one = (s.song_md.song_size % CHUNK_SZ) > 0 ? 1:0;
-    int chunked_length = (s.song_md.song_size/CHUNK_SZ + plus_one) * sizeof(song_chunk);
-    if(compare_hashes( (void*)s.song_md.song_verify_hash, (void*)c->song_verify_hash) && (c->song_length==chunked_length)){
-    	mb_printf("Song hash computed correctly \n\r");
-    }else{
-    	mb_printf("Song hash mismatch. Song file is corrupted \n\r");
-    	return;
-    }
 
 
     struct AES_ctx ctx;
@@ -740,6 +731,22 @@ void play_song() {
 				print("Chunk signature verification failed \r\n");
 				return;
 			}
+		}
+
+		if( verify_song_hash_flag == 1) //This must only be done once at the beginning of each song
+		{
+			mb_printf("Verify song integrity \n\r");
+			while(c->song_length == 0){} //Wait for Zynq to process hash
+
+			int plus_one = (s.song_md.song_size % CHUNK_SZ) > 0 ? 1:0;
+			int chunked_length = (s.song_md.song_size/CHUNK_SZ + plus_one) * sizeof(song_chunk);
+			if(compare_hashes( (void*)s.song_md.song_verify_hash, (void*)c->song_verify_hash) && (c->song_length==chunked_length)){
+				mb_printf("Song hash computed correctly \n\r");
+			}else{
+				mb_printf("Song hash mismatch. Song file is corrupted \n\r");
+				return;
+			}
+			verify_song_hash_flag = 0;
 		}
 
         cp_xfil_cnt = cp_num;
