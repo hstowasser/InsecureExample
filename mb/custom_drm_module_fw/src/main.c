@@ -403,8 +403,7 @@ int is_locked(uint8_t * is_shared_out) {
         if (s.uid == s.song_md.owner_id) {
         	user_locked = FALSE;
         } else {
-
-        	//TODO Implement song sharing
+        	// Check if the song is shared with current user
         	uint64_t shared_mask = 1 << s.uid;
         	if( (c->song.shared_user_block.enabled_users & shared_mask) > 0){
         		//User may be allowed to play this song
@@ -610,7 +609,6 @@ void play_song() {
                    PREVIEW_TIME_SEC, PREVIEW_SZ);
     } else {
         mb_printf("Song is unlocked. Playing full song\r\n");
-        //TODO implement song sharing
         //Compute song key by concating user key and song hash. Then hashing. Then concating the output with the common key. And hashing again.
         if( is_shared_user_flag == 1){
         	//If the song is being played by a shared user, decrypt the concat song key
@@ -682,8 +680,8 @@ void play_song() {
 
         if(chunk_ct < PREVIEW_CHUNK_CT){
         	//preview chunks
-        	//TODO Verify signature (Begin process)
-        	rsa_begin_verify( (void*)current_chunk->chunk_hash_signature, (void*)GLOBAL_PUBLIC_E, (void*)GLOBAL_PUBLIC_N); //TODO check
+        	//Verify signature (Begin process)
+        	rsa_begin_verify( (void*)current_chunk->chunk_hash_signature, (void*)GLOBAL_PUBLIC_E, (void*)GLOBAL_PUBLIC_N);
 
         }else{
         	//encrypted chunks
@@ -725,7 +723,7 @@ void play_song() {
 
 
 
-        //TODO DO final checks before playing (Check if signature came back valid)
+        //DO final checks before playing (Check if signature came back valid)
 		if(chunk_ct < PREVIEW_CHUNK_CT){
 			if( !verify_song_hash_signature( chunk_hash_buffer)){
 				print("Chunk signature verification failed \r\n");
