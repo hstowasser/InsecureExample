@@ -113,7 +113,7 @@ static u8 region_key_block[HASH_SZ]; //Holds common key after is_locked() is cal
 
 static u8 universal_buffer[sizeof(song_chunk)];
 
-static u8 rsa_output_buffer[RSA_KEY_SZ];
+static u8 rsa_output_buffer[RSA_KEY_SZ]; //Used to hold the output of RSA operations
 
 //////////////////////// INTERRUPT HANDLING ////////////////////////
 
@@ -387,9 +387,11 @@ int is_region_locked(){
 // checks if the song loaded into the shared buffer is locked for the current user
 // load_song_md() should be called first
 // if the song is region enabled this function decrypts the common_key and loads it into region_key_block[]
-int is_locked() {
+int is_locked(uint8_t * is_shared_out) {
     int user_locked = TRUE;
     int region_locked = TRUE;
+
+    *is_shared_out = 0; //Default to not shared
 
     // check for authorized user
     if (!s.logged_in) {
@@ -406,15 +408,9 @@ int is_locked() {
         	uint64_t shared_mask = 1 << s.uid;
         	if( (c->song.shared_user_block.enabled_users & shared_mask) > 0){
         		//User may be allowed to play this song
-        		//TODO decrypt concat song_key
-        		rsa_encrypt(c->song.shared_user_block.user_key_blocks[s.uid], (void*)user_rsa_private_key_block, PROVISIONED_USER_PUBLIC_KEY_N_BLOCKS[s.uid],  universal_buffer);
-        		//TODO copy concat song_key from universal buffer to somewhere else
+        		user_locked = FALSE;
+        		*is_shared_out = 1; //Lets play_song know that this is a shared user
         	}
-//            for (int i = 0; i < NUM_PROVISIONED_USERS && locked; i++) {
-//                if (s.uid == s.song_md.uids[i]) {
-//                    locked = FALSE;
-//                }
-//            }
         }
 
         if (user_locked) {
@@ -616,8 +612,8 @@ void play_song() {
 
     // truncate song if locked
     int is_truncated = 1;
-
-    if (length > PREVIEW_SZ && is_locked()) {
+    uint8_t is_shared_user_flag = 0;
+    if (length > PREVIEW_SZ && is_locked(&is_shared_user_flag)) {
         //length = PREVIEW_SZ;
         mb_printf("Song is locked.  Playing only %ds = %dB\r\n",
                    PREVIEW_TIME_SEC, PREVIEW_SZ);
@@ -625,12 +621,19 @@ void play_song() {
         mb_printf("Song is unlocked. Playing full song\r\n");
         //TODO implement song sharing
         //Compute song key by concating user key and song hash. Then hashing. Then concating the output with the common key. And hashing again.
-        memcpy(universal_buffer, user_key_block, HASH_SZ);
-        memcpy(universal_buffer+HASH_SZ, s.song_md.song_hash, HASH_SZ);
-        sha256_compute_hash((void*)universal_buffer , HASH_SZ*2 , 1, hash_buffer); 
-        memcpy(universal_buffer, hash_buffer, HASH_SZ); // Copy result of first hash
-        memcpy(universal_buffer+HASH_SZ, region_key_block, HASH_SZ);
-        sha256_compute_hash((void*)universal_buffer , HASH_SZ*2 , 1, hash_buffer); // The first 16 bytes are the actual song key
+        if( is_shared_user_flag == 1){
+        	//If the song is being played by a shared user, decrypt the concat song key
+        	rsa_encrypt((void*)c->song.shared_user_block.user_key_blocks[s.uid], (void*)user_rsa_private_key_block, (void*)PROVISIONED_USER_PUBLIC_KEY_N_BLOCKS[(uint8_t)s.uid],  rsa_output_buffer);
+        	memcpy(hash_buffer, rsa_output_buffer+RSA_KEY_SZ-HASH_SZ, HASH_SZ); // Copy the decrypted result into the hash_buffer
+        }else{
+        	//If the song is being played by the owner, generate the concat song key
+			memcpy(universal_buffer, user_key_block, HASH_SZ);
+			memcpy(universal_buffer+HASH_SZ, s.song_md.song_hash, HASH_SZ);
+			sha256_compute_hash((void*)universal_buffer , HASH_SZ*2 , 1, hash_buffer);
+        }
+        memcpy(universal_buffer, hash_buffer, HASH_SZ); // Copy concat song key into universal buffer
+        memcpy(universal_buffer+HASH_SZ, region_key_block, HASH_SZ); // append the common key to the end of the concat key
+        sha256_compute_hash((void*)universal_buffer , HASH_SZ*2 , 1, hash_buffer); // The first 16 bytes are the actual song key... Finally
         AES_init_ctx_iv(&ctx, hash_buffer, iv); //Initialize AES_CBC key
         is_truncated = 0;
     }
@@ -796,15 +799,19 @@ void share_song() {
     mb_printf("Generating song key \n\r");
     //Generate song key
     memcpy(universal_buffer, user_key_block, HASH_SZ);
-	memcpy(universal_buffer+HASH_SZ, c->song.song_header.song_hash, HASH_SZ);
-	sha256_compute_hash((void*)universal_buffer , HASH_SZ*2 , 1, hash_buffer); // The first 16 bytes are the song key
+	memcpy(universal_buffer+HASH_SZ, (void*)c->song.song_header.song_hash, HASH_SZ);
+	sha256_compute_hash((void*)universal_buffer , HASH_SZ*2 , 1, hash_buffer); // The first 16 bytes is the concat song key
 
-	//TODO Get new users public key
-	uint8_t * new_use_public_key = (void*)PROVISIONED_USER_PUBLIC_KEY_N_BLOCKS[uid];
+	//Get new users public key
+	uint8_t * new_use_public_key = (void*)PROVISIONED_USER_PUBLIC_KEY_N_BLOCKS[(uint8_t)uid];
 
-    //TODO Encrypt song key using new users public key
+    //Encrypt song key using new users public key
+	memset(rsa_output_buffer, 0, RSA_KEY_SZ);
+	memcpy(rsa_output_buffer+RSA_KEY_SZ-HASH_SZ, hash_buffer, HASH_SZ); //Copy the key into the rsa buffer
+	rsa_encrypt(rsa_output_buffer, (void*)GLOBAL_PUBLIC_E, new_use_public_key,  rsa_output_buffer); //Encrypt the key and write it back to the output buffer
 
-	//TODO Write the encrypted song key into the correct shared user key block
+	//Write the encrypted song key into the correct shared user key block
+	memcpy((void*)c->song.shared_user_block.user_key_blocks[(uint8_t)uid], rsa_output_buffer, RSA_KEY_SZ);
 
 	//Update shared users
 	mb_printf("Writing enabled_users %d \n\r", shared_mask);
