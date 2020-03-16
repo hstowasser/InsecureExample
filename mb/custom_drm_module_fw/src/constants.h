@@ -1,35 +1,39 @@
 /*
- * miPod.h
+ * constants.h
  *
- *  Created on: Jan 9, 2020
- *      Author: ectf
+ *  Created on: Feb 28, 2020
+ *      Author: heiko
  */
 
-#ifndef SRC_MIPOD_H_
-#define SRC_MIPOD_H_
+#ifndef SRC_CONSTANTS_H_
+#define SRC_CONSTANTS_H_
 
 #include <stdint.h>
+#include "xil_printf.h"
+// shared DDR address
+#define SHARED_DDR_BASE (0x20000000 + 0x1CC00000)
 
-// miPod constants
-#define USR_CMD_SZ 64
 
-// protocol constants
-#define MAX_REGIONS 64
-#define REGION_NAME_SZ 64
-#define MAX_USERS 64
-#define USERNAME_SZ 64
-#define MAX_PIN_SZ 64
-#define MAX_SONG_SZ (1<<25)
+// number of seconds to record/playback
+#define PREVIEW_TIME_SEC 30
 
+
+
+#define FIFO_CAP (4096*4)
 #define CHUNK_SZ 16000
 #define HASH_SZ 16 // 128 bits. Only using most significant 16 bytes of SHA256
 #define HASH_SZ_VERIFY 32
 #define RSA_KEY_SZ 128
 #define PAD_SZ 12
 
+// ADC/DAC sampling rate in Hz
+#define AUDIO_SAMPLING_RATE 48000
+#define BYTES_PER_SAMP 2
+#define PREVIEW_SZ (PREVIEW_TIME_SEC * AUDIO_SAMPLING_RATE * BYTES_PER_SAMP)
+#define PREVIEW_CHUNK_CT (PREVIEW_SZ/CHUNK_SZ)
+
 #define REGION_KEY_BOX_SZ HASH_SZ
 #define NUMBER_OF_REGIONS 32
-#define NUM_REGIONS 32
 
 #define USER_KEY_BOX_SZ RSA_KEY_SZ
 #define NUMBER_OF_SHARED_USERS 64 //64th block not used
@@ -37,41 +41,42 @@
 #define get_padded_song_length(len) (len+(16-len%HASH_SZ)
 
 // printing utility
-#define MP_PROMPT "mP> "
-#define mp_printf(...) printf(MP_PROMPT __VA_ARGS__)
+#define MB_PROMPT "\r\nMB> "
+#define mb_printf(...) xil_printf(MB_PROMPT __VA_ARGS__)
 
-#define USER_PROMPT "miPod %s# "
-#define print_prompt() printf(USER_PROMPT, "")
-#define print_prompt_msg(...) printf(USER_PROMPT, __VA_ARGS__)
+//#define NUM_REGIONS 32
 
-// struct to interpret shared buffer as a query
+// protocol constants
+#define MAX_REGIONS 64
+#define REGION_NAME_SZ 64
+#define MAX_USERS 64
+#define USERNAME_SZ 64
+#define MAX_PIN_SZ 64
+#define MAX_SONG_SZ (1<<27)  //Double check this
+
+// LED colors and controller
+struct color {
+    u32 r;
+    u32 g;
+    u32 b;
+};
+
 typedef struct {
     int num_regions;
     int num_users;
     char owner[USERNAME_SZ];
-    char regions[MAX_REGIONS * REGION_NAME_SZ];
+    char regions[MAX_REGIONS * REGION_NAME_SZ]; // MAX_REGIONS was 64 by error
     char users[MAX_USERS * USERNAME_SZ];
 } query;
 
-// simulate array of 64B names without pointer indirection
 #define q_region_lookup(q, i) (q.regions + (i * REGION_NAME_SZ))
 #define q_user_lookup(q, i) (q.users + (i * USERNAME_SZ))
-
-
-// struct to interpret drm metadata
-typedef struct __attribute__((__packed__)) {
-    char md_size;
-    char owner_id;
-    char num_regions;
-    char num_users;
-    char buf[];
-} drm_md;
 
 
 
 typedef struct __attribute__((__packed__)) {
 	uint32_t regions; // Bits flipped for regions that are enabled
-	uint8_t region_keys[REGION_KEY_BOX_SZ * NUM_REGIONS];
+	uint8_t region_keys[REGION_KEY_BOX_SZ * NUMBER_OF_REGIONS];
 } enabled_region_block;
 
 typedef struct __attribute__((__packed__)) {
@@ -107,16 +112,6 @@ typedef struct __attribute__((__packed__)) {
 	song_chunk block_array[]; //Data blocks
 } song;
 
-// accessors for variable-length metadata fields
-#define get_drm_rids(d) (d.md.buf)
-#define get_drm_uids(d) (d.md.buf + d.md.num_regions)
-#define get_drm_song(d) ((char *)(&d.md) + d.md.md_size)
-
-
-// shared buffer values
-enum commands { QUERY_PLAYER, QUERY_SONG, LOGIN, LOGOUT, SHARE, PLAY, STOP, DIGITAL_OUT, PAUSE, RESTART, FF, RW };
-enum states   { STOPPED, WORKING, PLAYING, PAUSED };
-
 
 // struct to interpret shared command channel
 typedef volatile struct __attribute__((__packed__)) {
@@ -133,8 +128,22 @@ typedef volatile struct __attribute__((__packed__)) {
     union {
         song song;
         query query;
-        char buf[MAX_SONG_SZ]; // sets correct size of cmd_channel for allocation
     };
 } cmd_channel;
 
-#endif /* SRC_MIPOD_H_ */
+
+
+
+// store of internal state
+typedef struct {
+    char logged_in;             // whether or not a user is logged on
+    u8 uid;                     // logged on user id
+    char username[USERNAME_SZ]; // logged on username
+    char pin[MAX_PIN_SZ];       // logged on pin
+    u8 pin_hash[HASH_SZ];		// hash of user pin
+    header song_md;            // current song metadata/header
+    shared_users song_shared_user_md;
+} internal_state;
+
+
+#endif /* SRC_CONSTANTS_H_ */

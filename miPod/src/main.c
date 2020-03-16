@@ -19,6 +19,11 @@
 
 volatile cmd_channel *c;
 
+#include <stdio.h>
+#include <memory.h>
+#include <string.h>
+#include "HASH/sha256.h"
+#include "HASH/md5.h"
 
 //////////////////////// UTILITY FUNCTIONS ////////////////////////
 
@@ -192,7 +197,8 @@ void share_song(char *song_name, char *username) {
     }
 
     // load the song into the shared buffer
-    if (!load_file(song_name, (void*)&c->song)) {
+    size_t file_len = load_file(song_name, (void*)&c->song);
+    if ( !file_len) {
         mp_printf("Failed to load song!\r\n");
         return;
     }
@@ -205,7 +211,7 @@ void share_song(char *song_name, char *username) {
     while (c->drm_state == WORKING) continue; // wait for DRM to share song
 
     // request was rejected if WAV length is 0
-    length = c->song.wav_size;
+    length = c->song.song_header.song_size;
     if (length == 0) {
         mp_printf("Share rejected\r\n");
         return;
@@ -219,9 +225,9 @@ void share_song(char *song_name, char *username) {
     }
 
     // write song dump to file
-    mp_printf("Writing song to file '%s' (%dB)\r\n", song_name, length);
-    while (written < length) {
-        wrote = write(fd, (char *)&c->song + written, length - written);
+    mp_printf("Writing song to file '%s' (%dB)\r\n", song_name, file_len);
+    while (written < file_len) {
+        wrote = write(fd, (char *)&c->song + written, file_len - written);
         if (wrote == -1) {
             mp_printf("Error in writing file! Error = %d\r\n", errno);
             return;
@@ -233,18 +239,62 @@ void share_song(char *song_name, char *username) {
 }
 
 
+int sha256_verify( char * buf, int len)
+{
+
+	SHA256_CTX ctx;
+	int pass = 1;
+
+	sha256_init(&ctx);
+	sha256_update(&ctx, (void*)buf, len);
+	sha256_final(&ctx, (void*)c->song_verify_hash);
+	mp_printf("Calculated SONG hash %d \n\r",len);
+	for( int i = 0; i < 32; i++){
+		printf("%02x ", c->song_verify_hash[i]);
+	}
+	printf("\n\r");
+	c->song_length = len;
+
+	return(pass);
+}
+
+int md5_verify( char * buf, int len)
+{
+
+	MD5_CTX ctx;
+	int pass = 1;
+
+	md5_init(&ctx);
+	md5_update(&ctx, (void*)buf, len);
+	md5_final(&ctx, (void*)c->song_verify_hash);
+	mp_printf("Calculated SONG hash %d \n\r",len);
+	c->song_length = len;
+
+	return(pass);
+}
+
 // plays a song and enters the playback command loop
 int play_song(char *song_name) {
     char usr_cmd[USR_CMD_SZ + 1], *cmd = NULL, *arg1 = NULL, *arg2 = NULL;
 
     // load song into shared buffer
-    if (!load_file(song_name, (void*)&c->song)) {
+    int file_size = load_file(song_name, (void*)&c->song);
+    if (!file_size) {
         mp_printf("Failed to load song!\r\n");
         return 0;
     }
 
+    c->song_length = 0; //Set song_length to 0
+
+
     // drive the DRM
     send_command(PLAY);
+
+    md5_verify((void*)(&c->song.block_array), file_size - sizeof(c->song.song_header) - sizeof(c->song.shared_user_block) );
+
+
+    //c->song_length = c->song.song_header.song_size;
+
     while (c->drm_state == STOPPED) continue; // wait for DRM to start playing
 
     // play loop
@@ -304,7 +354,7 @@ int play_song(char *song_name) {
 
 // turns DRM song into original WAV for digital output
 void digital_out(char *song_name) {
-    char fname[64];
+    /*char fname[64];
 
     // load file into shared buffer
     if (!load_file(song_name, (void*)&c->song)) {
@@ -319,7 +369,6 @@ void digital_out(char *song_name) {
 
     // open digital output file
     int written = 0, wrote, length = c->song.file_size + 8;
-    sprintf(fname, "%s.dout", song_name);
     int fd = open(fname, O_WRONLY | O_CREAT | O_TRUNC);
     if (fd == -1){
         mp_printf("Failed to open file! Error = %d\r\n", errno);
@@ -337,7 +386,7 @@ void digital_out(char *song_name) {
         written += wrote;
     }
     close(fd);
-    mp_printf("Finished writing file\r\n");
+    mp_printf("Finished writing file\r\n");*/
 }
 
 
@@ -358,6 +407,7 @@ int main(int argc, char** argv)
         mp_printf("MMAP Failed! Error = %d\r\n", errno);
         return -1;
     }
+    mp_printf("MiPod v0.1 \r\n");
     mp_printf("Command channel open at %p (%dB)\r\n", c, sizeof(cmd_channel));
 
     // dump player information before command loop
