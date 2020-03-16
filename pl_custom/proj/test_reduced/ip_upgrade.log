@@ -1,0 +1,405 @@
+Copyright 1986-2017 Xilinx, Inc. All Rights Reserved.
+------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2017.4 (lin64) Build 2086221 Fri Dec 15 20:54:30 MST 2017
+| Date         : Sun Mar 15 20:45:00 2020
+| Host         : BuntuBot running 64-bit Ubuntu 18.04.4 LTS
+| Command      : upgrade_ip
+| Device       : xc7z007sclg400-1
+------------------------------------------------------------------------------------
+
+Upgrade Log for IP 'system_FrankenCryptCore_0_0'
+
+1. Summary
+----------
+
+SUCCESS in the upgrade of system_FrankenCryptCore_0_0 from user.org:user:FrankenCryptCore:13.0 (Rev. 1) to user.org:user:FrankenCryptCore:14.0 (Rev. 1)
+
+
+
+
+
+
+Copyright 1986-2017 Xilinx, Inc. All Rights Reserved.
+------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2017.4 (lin64) Build 2086221 Fri Dec 15 20:54:30 MST 2017
+| Date         : Sun Mar 15 18:57:35 2020
+| Host         : BuntuBot running 64-bit Ubuntu 18.04.4 LTS
+| Command      : upgrade_ip
+| Device       : xc7z007sclg400-1
+------------------------------------------------------------------------------------
+
+Upgrade Log for IP 'system_FrankenCryptCore_0_0'
+
+1. Summary
+----------
+
+SUCCESS in the upgrade of system_FrankenCryptCore_0_0 from user.org:user:FrankenCryptCore:12.2 (Rev. 1) to user.org:user:FrankenCryptCore:13.0 (Rev. 1)
+
+
+
+
+
+
+Copyright 1986-2017 Xilinx, Inc. All Rights Reserved.
+------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2017.4 (lin64) Build 2086221 Fri Dec 15 20:54:30 MST 2017
+| Date         : Sun Mar 15 13:42:20 2020
+| Host         : BuntuBot running 64-bit Ubuntu 18.04.4 LTS
+| Command      : upgrade_ip
+| Device       : xc7z007sclg400-1
+------------------------------------------------------------------------------------
+
+Upgrade Log for IP 'system_FrankenCryptCore_0_0'
+
+1. Summary
+----------
+
+CAUTION (success, with warnings) in the upgrade of system_FrankenCryptCore_0_0 from user.org:user:FrankenCryptCore:12.1 (Rev. 1) to user.org:user:FrankenCryptCore:12.2 (Rev. 1)
+
+After upgrade, an IP may have parameter and port differences compared to the original customization. Please review the parameters within the IP customization GUI to ensure proper functionality. Also, please review the updated IP instantiation template to ensure proper connectivity, and update your design if required.
+
+2. Connection Warnings
+----------------------
+
+Detected external port differences while upgrading 'system_FrankenCryptCore_0_0'. These changes may impact your design.
+
+
+-Upgrade has removed port 'clk_10Mhz'
+
+
+
+
+
+
+
+Copyright 1986-2017 Xilinx, Inc. All Rights Reserved.
+------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2017.4 (lin64) Build 2086221 Fri Dec 15 20:54:30 MST 2017
+| Date         : Sat Mar 14 23:16:17 2020
+| Host         : BuntuBot running 64-bit Ubuntu 18.04.4 LTS
+| Command      : upgrade_ip
+| Device       : xc7z007sclg400-1
+------------------------------------------------------------------------------------
+
+Upgrade Log for IP 'system_FrankenCryptCore_0_0'
+
+1. Summary
+----------
+
+SUCCESS in the upgrade of system_FrankenCryptCore_0_0 from user.org:user:FrankenCryptCore:12.0 (Rev. 1) to user.org:user:FrankenCryptCore:12.1 (Rev. 1)
+
+
+
+
+
+
+Copyright 1986-2017 Xilinx, Inc. All Rights Reserved.
+------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2017.4 (lin64) Build 2086221 Fri Dec 15 20:54:30 MST 2017
+| Date         : Sat Mar 14 22:32:04 2020
+| Host         : BuntuBot running 64-bit Ubuntu 18.04.4 LTS
+| Command      : upgrade_ip
+| Device       : xc7z007sclg400-1
+------------------------------------------------------------------------------------
+
+Upgrade Log for IP 'system_FrankenCryptCore_0_0'
+
+1. Summary
+----------
+
+SUCCESS in the upgrade of system_FrankenCryptCore_0_0 from user.org:user:FrankenCryptCore:11.9 (Rev. 1) to user.org:user:FrankenCryptCore:12.0 (Rev. 1)
+
+
+
+
+
+
+Copyright 1986-2017 Xilinx, Inc. All Rights Reserved.
+------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2017.4 (lin64) Build 2086221 Fri Dec 15 20:54:30 MST 2017
+| Date         : Sat Mar 14 17:40:02 2020
+| Host         : BuntuBot running 64-bit Ubuntu 18.04.4 LTS
+| Command      : upgrade_ip
+| Device       : xc7z007sclg400-1
+------------------------------------------------------------------------------------
+
+Upgrade Log for IP 'system_FrankenCryptCore_0_0'
+
+1. Summary
+----------
+
+SUCCESS in the upgrade of system_FrankenCryptCore_0_0 from user.org:user:FrankenCryptCore:11.8 (Rev. 1) to user.org:user:FrankenCryptCore:11.9 (Rev. 1)
+
+
+
+
+
+
+Copyright 1986-2017 Xilinx, Inc. All Rights Reserved.
+------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2017.4 (lin64) Build 2086221 Fri Dec 15 20:54:30 MST 2017
+| Date         : Sat Mar 14 10:41:01 2020
+| Host         : BuntuBot running 64-bit Ubuntu 18.04.4 LTS
+| Command      : upgrade_ip
+| Device       : xc7z007sclg400-1
+------------------------------------------------------------------------------------
+
+Upgrade Log for IP 'system_FrankenCryptCore_0_0'
+
+1. Summary
+----------
+
+SUCCESS in the upgrade of system_FrankenCryptCore_0_0 from user.org:user:FrankenCryptCore:11.6 (Rev. 1) to user.org:user:FrankenCryptCore:11.8 (Rev. 1)
+
+
+
+
+
+
+Copyright 1986-2017 Xilinx, Inc. All Rights Reserved.
+------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2017.4 (lin64) Build 2086221 Fri Dec 15 20:54:30 MST 2017
+| Date         : Sat Mar 14 00:51:41 2020
+| Host         : BuntuBot running 64-bit Ubuntu 18.04.4 LTS
+| Command      : upgrade_ip
+| Device       : xc7z007sclg400-1
+------------------------------------------------------------------------------------
+
+Upgrade Log for IP 'system_FrankenCryptCore_0_0'
+
+1. Summary
+----------
+
+SUCCESS in the upgrade of system_FrankenCryptCore_0_0 from user.org:user:FrankenCryptCore:11.5 (Rev. 1) to user.org:user:FrankenCryptCore:11.6 (Rev. 1)
+
+
+
+
+
+
+Copyright 1986-2017 Xilinx, Inc. All Rights Reserved.
+------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2017.4 (lin64) Build 2086221 Fri Dec 15 20:54:30 MST 2017
+| Date         : Fri Mar 13 23:54:29 2020
+| Host         : BuntuBot running 64-bit Ubuntu 18.04.4 LTS
+| Command      : upgrade_ip
+| Device       : xc7z007sclg400-1
+------------------------------------------------------------------------------------
+
+Upgrade Log for IP 'system_FrankenCryptCore_0_0'
+
+1. Summary
+----------
+
+SUCCESS in the upgrade of system_FrankenCryptCore_0_0 from user.org:user:FrankenCryptCore:11.4 (Rev. 1) to user.org:user:FrankenCryptCore:11.5 (Rev. 1)
+
+
+
+
+
+
+Copyright 1986-2017 Xilinx, Inc. All Rights Reserved.
+------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2017.4 (lin64) Build 2086221 Fri Dec 15 20:54:30 MST 2017
+| Date         : Fri Mar 13 19:59:05 2020
+| Host         : BuntuBot running 64-bit Ubuntu 18.04.4 LTS
+| Command      : upgrade_ip
+| Device       : xc7z007sclg400-1
+------------------------------------------------------------------------------------
+
+Upgrade Log for IP 'system_FrankenCryptCore_0_0'
+
+1. Summary
+----------
+
+SUCCESS in the upgrade of system_FrankenCryptCore_0_0 from user.org:user:FrankenCryptCore:11.3 (Rev. 1) to user.org:user:FrankenCryptCore:11.4 (Rev. 1)
+
+
+
+
+
+
+Copyright 1986-2017 Xilinx, Inc. All Rights Reserved.
+------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2017.4 (lin64) Build 2086221 Fri Dec 15 20:54:30 MST 2017
+| Date         : Fri Mar 13 19:26:43 2020
+| Host         : BuntuBot running 64-bit Ubuntu 18.04.4 LTS
+| Command      : upgrade_ip
+| Device       : xc7z007sclg400-1
+------------------------------------------------------------------------------------
+
+Upgrade Log for IP 'system_FrankenCryptCore_0_0'
+
+1. Summary
+----------
+
+SUCCESS in the upgrade of system_FrankenCryptCore_0_0 from user.org:user:FrankenCryptCore:11.2 (Rev. 1) to user.org:user:FrankenCryptCore:11.3 (Rev. 1)
+
+
+
+
+
+
+Copyright 1986-2017 Xilinx, Inc. All Rights Reserved.
+------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2017.4 (lin64) Build 2086221 Fri Dec 15 20:54:30 MST 2017
+| Date         : Fri Mar 13 19:06:12 2020
+| Host         : BuntuBot running 64-bit Ubuntu 18.04.4 LTS
+| Command      : upgrade_ip
+| Device       : xc7z007sclg400-1
+------------------------------------------------------------------------------------
+
+Upgrade Log for IP 'system_FrankenCryptCore_0_0'
+
+1. Summary
+----------
+
+SUCCESS in the upgrade of system_FrankenCryptCore_0_0 from user.org:user:FrankenCryptCore:11.1 (Rev. 1) to user.org:user:FrankenCryptCore:11.2 (Rev. 1)
+
+
+
+
+
+
+Copyright 1986-2017 Xilinx, Inc. All Rights Reserved.
+------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2017.4 (lin64) Build 2086221 Fri Dec 15 20:54:30 MST 2017
+| Date         : Fri Mar 13 18:59:06 2020
+| Host         : BuntuBot running 64-bit Ubuntu 18.04.4 LTS
+| Command      : upgrade_ip
+| Device       : xc7z007sclg400-1
+------------------------------------------------------------------------------------
+
+Upgrade Log for IP 'system_FrankenCryptCore_0_0'
+
+1. Summary
+----------
+
+SUCCESS in the upgrade of system_FrankenCryptCore_0_0 from user.org:user:FrankenCryptCore:11.0 (Rev. 1) to user.org:user:FrankenCryptCore:11.1 (Rev. 1)
+
+
+
+
+
+
+Copyright 1986-2017 Xilinx, Inc. All Rights Reserved.
+------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2017.4 (lin64) Build 2086221 Fri Dec 15 20:54:30 MST 2017
+| Date         : Fri Mar 13 17:00:57 2020
+| Host         : BuntuBot running 64-bit Ubuntu 18.04.4 LTS
+| Command      : upgrade_ip
+| Device       : xc7z007sclg400-1
+------------------------------------------------------------------------------------
+
+Upgrade Log for IP 'system_FrankenCryptCore_0_0'
+
+1. Summary
+----------
+
+SUCCESS in the upgrade of system_FrankenCryptCore_0_0 from user.org:user:FrankenCryptCore:10.5 (Rev. 1) to user.org:user:FrankenCryptCore:11.0 (Rev. 1)
+
+
+
+
+
+
+Copyright 1986-2017 Xilinx, Inc. All Rights Reserved.
+------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2017.4 (lin64) Build 2086221 Fri Dec 15 20:54:30 MST 2017
+| Date         : Fri Mar 13 16:37:33 2020
+| Host         : BuntuBot running 64-bit Ubuntu 18.04.4 LTS
+| Command      : upgrade_ip
+| Device       : xc7z007sclg400-1
+------------------------------------------------------------------------------------
+
+Upgrade Log for IP 'system_FrankenCryptCore_0_0'
+
+1. Summary
+----------
+
+SUCCESS in the upgrade of system_FrankenCryptCore_0_0 from user.org:user:FrankenCryptCore:10.4 (Rev. 1) to user.org:user:FrankenCryptCore:10.5 (Rev. 1)
+
+
+
+
+
+
+Copyright 1986-2017 Xilinx, Inc. All Rights Reserved.
+------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2017.4 (lin64) Build 2086221 Fri Dec 15 20:54:30 MST 2017
+| Date         : Fri Mar 13 14:32:14 2020
+| Host         : BuntuBot running 64-bit Ubuntu 18.04.4 LTS
+| Command      : upgrade_ip
+| Device       : xc7z007sclg400-1
+------------------------------------------------------------------------------------
+
+Upgrade Log for IP 'system_FrankenCryptCore_0_0'
+
+1. Summary
+----------
+
+SUCCESS in the upgrade of system_FrankenCryptCore_0_0 from user.org:user:FrankenCryptCore:10.3 (Rev. 1) to user.org:user:FrankenCryptCore:10.4 (Rev. 1)
+
+
+
+
+
+
+Copyright 1986-2017 Xilinx, Inc. All Rights Reserved.
+------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2017.4 (lin64) Build 2086221 Fri Dec 15 20:54:30 MST 2017
+| Date         : Fri Mar 13 14:09:55 2020
+| Host         : BuntuBot running 64-bit Ubuntu 18.04.4 LTS
+| Command      : upgrade_ip
+| Device       : xc7z007sclg400-1
+------------------------------------------------------------------------------------
+
+Upgrade Log for IP 'system_FrankenCryptCore_0_0'
+
+1. Summary
+----------
+
+SUCCESS in the upgrade of system_FrankenCryptCore_0_0 from user.org:user:FrankenCryptCore:10.2 (Rev. 1) to user.org:user:FrankenCryptCore:10.3 (Rev. 1)
+
+
+
+
+
+
+Copyright 1986-2017 Xilinx, Inc. All Rights Reserved.
+------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2017.4 (lin64) Build 2086221 Fri Dec 15 20:54:30 MST 2017
+| Date         : Fri Mar 13 13:30:25 2020
+| Host         : BuntuBot running 64-bit Ubuntu 18.04.4 LTS
+| Command      : upgrade_ip
+| Device       : xc7z007sclg400-1
+------------------------------------------------------------------------------------
+
+Upgrade Log for IP 'system_FrankenCryptCore_0_0'
+
+1. Summary
+----------
+
+SUCCESS in the upgrade of system_FrankenCryptCore_0_0 from user.org:user:FrankenCryptCore:10.1 (Rev. 1) to user.org:user:FrankenCryptCore:10.2 (Rev. 1)
+
+
+
+
+
+
+Copyright 1986-2017 Xilinx, Inc. All Rights Reserved.
+------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2017.4 (lin64) Build 2086221 Fri Dec 15 20:54:30 MST 2017
+| Date         : Fri Mar 13 13:08:09 2020
+| Host         : BuntuBot running 64-bit Ubuntu 18.04.4 LTS
+| Command      : upgrade_ip
+| Device       : xc7z007sclg400-1
+------------------------------------------------------------------------------------
+
+Upgrade Log for IP 'system_FrankenCryptCore_0_0'
+
+1. Summary
+----------
+
+SUCCESS in the upgrade of system_FrankenCryptCore_0_0 from user.org:user:FrankenCryptCore:8.1 (Rev. 1) to user.org:user:FrankenCryptCore:10.1 (Rev. 1)
+
