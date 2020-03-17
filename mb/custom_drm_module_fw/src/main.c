@@ -61,7 +61,6 @@
 #include "HASH/sha256.h"
 #include "AES/aes.h"
 #include "RSA/rsa.h"
-//#include "frankencrypt.c"
 
 //For testing random
 #include <stdlib.h>
@@ -72,23 +71,11 @@
 // audio DMA access
 static XAxiDma sAxiDma;
 
-// LED colors and controller
-//u32 *led = (u32*) XPAR_RGB_PWM_0_PWM_AXI_BASEADDR;
-//const struct color RED =    {0x01ff, 0x0000, 0x0000};
-//const struct color YELLOW = {0x01ff, 0x01ff, 0x0000};
-//const struct color GREEN =  {0x0000, 0x01ff, 0x0000};
-//const struct color BLUE =   {0x0000, 0x0000, 0x01ff};
-
 // shared buffer values
 enum commands { QUERY_PLAYER, QUERY_SONG, LOGIN, LOGOUT, SHARE, PLAY, STOP, DIGITAL_OUT, PAUSE, RESTART, FF, RW };
 enum states   { STOPPED, WORKING, PLAYING, PAUSED };
 
 // change states
-//#define change_state(state, color) c->drm_state = state; setLED(led, color);
-//#define set_stopped() change_state(STOPPED, RED)
-//#define set_working() change_state(WORKING, YELLOW)
-//#define set_playing() change_state(PLAYING, GREEN)
-//#define set_paused()  change_state(PAUSED, BLUE)
 #define change_state(state) c->drm_state = state;
 #define set_stopped() change_state(STOPPED)
 #define set_working() change_state(WORKING)
@@ -155,51 +142,8 @@ int compare_verification_hashes(u8 * hash1, u8 * hash2)
 	return ret;
 }
 
-void sub(uint8_t * A, uint8_t * B, uint8_t * out)
-{
-	u16 carry = 1;
-	for( int i = 127; i >= 0; i--){
-		u16 a = A[i];
-		u16 b = B[i];
-		carry = a + ~b + carry;
-		out[i] = carry % 0x100;
-		carry >>= 8;
-		carry = (carry % 2) ^ 1;
-	}
-}
 
 
-//Signature verification must first be started
-int verify_signature(u8 * expected, u8 * n)
-{
-	static u8 sig_out[RSA_KEY_SZ];
-
-	rsa_get_verify_out(sig_out);
-
-
-	int ret1 = 1;
-
-	for(int i = 0; i < RSA_KEY_SZ ; i++){
-		if(sig_out[i] != expected[i]){
-			ret1 = 0;
-		}
-	}
-
-	int ret2 = 1;
-	for(int i = 0; i < RSA_KEY_SZ ; i++){
-		if(sig_out[i] - n[i] != expected[i]){
-			ret2 = 0;
-		}
-	}
-
-	if(ret1 == 1){
-		return 1;
-	}else if( ret2 == 1){
-		return 1;
-	}else{
-		return 0;
-	}
-}
 
 //////////////////////// COMMAND FUNCTIONS ////////////////////////
 
@@ -318,9 +262,6 @@ int verify_song_md_hash()
 // rsa_begin_verify must be called before using this
 int verify_song_hash_signature( uint8_t * hash)//, uint8_t * signature , uint8_t * key, uint8_t * n)
 {
-
-
-
 	uint8_t * expected = (void*)hash;
 
 	rsa_get_verify_out(rsa_output_buffer);
@@ -349,16 +290,6 @@ int verify_song_md_hash_signature()
 	uint8_t * expected = (void*)s.song_md.header_hash;
 	rsa_begin_verify( (void*)s.song_md.hash_signature, (void*)GLOBAL_PUBLIC_E, (void*)GLOBAL_PUBLIC_N);
 	return verify_song_hash_signature( expected );
-}
-
-void print_song_metadata()
-{
-	mb_printf("Owner %d\n\r",s.song_md.owner_id);
-	mb_printf("Song size %d\n\r", s.song_md.song_size);
-	mb_printf("Song Hash[0] %02x \n\r",s.song_md.song_hash[0]);
-	mb_printf("Song Verify Hash[0] %02x \n\r",s.song_md.song_verify_hash[0]);
-	mb_printf("Song header_hash[0] %02x \n\r",s.song_md.header_hash[0]);
-	mb_printf("Song hash_signature[0] %02x \n\r",s.song_md.hash_signature[0]);
 }
 
 // load_song_md() should be called first
@@ -550,12 +481,12 @@ void query_song() {
 
     uint64_t enabled_user_bits = s.song_shared_user_md.enabled_users;
     mb_printf("enabled users %d \n\r", enabled_user_bits);
-    int user_count = 1;
+    int user_count = 0;
 	for( int i = 0; i < 63; i++)
 	{
 		if (enabled_user_bits & 1){
 			uid_to_username(i, &name, FALSE);
-			strcpy((char *)q_user_lookup(c->query, i), name);
+			strcpy((char *)q_user_lookup(c->query, user_count ), name);
 			user_count += 1;
 		}
 		enabled_user_bits >>= 1;
@@ -571,9 +502,6 @@ void play_song() {
 
     mb_printf("Reading Audio File...");
     load_song_md();
-    //print_song_metadata();
-
-    mb_printf("Header = %d", sizeof(header));
 
 
     sha256_compute_hash((void*)&s.song_md, sizeof(header)-HASH_SZ-RSA_KEY_SZ, 1, hash_buffer);
@@ -582,8 +510,6 @@ void play_song() {
     	return;
     }
 
-
-    mb_printf("Verifying header signature \n\r");
     if( !verify_song_md_hash_signature()){ //This operation uses the Universal Buffer
     	mb_printf("Song File could not be verified \n\r");
     	return;
@@ -591,7 +517,6 @@ void play_song() {
 
     // get WAV length
     length = s.song_md.song_size;
-    mb_printf("Song length = %d", length);
 
     //Verify song_verify_hash. Raise the flag to high.
     uint8_t verify_song_hash_flag = 1;
@@ -637,7 +562,6 @@ void play_song() {
     int number_of_chunks = length%CHUNK_SZ==0 ? length/CHUNK_SZ : length/CHUNK_SZ + 1;
     int last_chunk_len = length%CHUNK_SZ; //The amount of samples in the last chunk. So we don't play junk at the end of the song
 
-    mb_printf("Number of chunks %d", number_of_chunks);
     // write entire file to two-block codec fifo
     // writes to one block while the other is being played
     set_playing();
@@ -660,12 +584,10 @@ void play_song() {
                 mb_printf("Stopping playback...");
                 return;
             case FF:
-            	//TODO implement
             	mb_printf("Fast Forward... \r\n");
             	chunk_ct += 30;
             	continue;
             case RW:
-            	//TODO implement
             	mb_printf("Rewind... \r\n");
             	chunk_ct -= 30;
 				continue;
@@ -720,8 +642,6 @@ void play_song() {
     	if(current_chunk->chunk_number != chunk_ct){
     		mb_printf("Error: song chunk out of order. Stopping \n\r");
     		return;
-    	}else{
-    		mb_printf("Playing %d \r\n", current_chunk->chunk_number);
     	}
 
 
@@ -751,9 +671,7 @@ void play_song() {
 
 			int plus_one = (s.song_md.song_size % CHUNK_SZ) > 0 ? 1:0;
 			int chunked_length = (s.song_md.song_size/CHUNK_SZ + plus_one) * sizeof(song_chunk);
-			if(compare_hashes( (void*)s.song_md.song_verify_hash, (void*)c->song_verify_hash) && (c->song_length==chunked_length)){
-				mb_printf("Song hash computed correctly \n\r");
-			}else{
+			if(!compare_hashes( (void*)s.song_md.song_verify_hash, (void*)c->song_verify_hash) && (c->song_length==chunked_length)){
 				mb_printf("Song hash mismatch. Song file is corrupted \n\r");
 				return;
 			}
@@ -785,8 +703,7 @@ void play_song() {
 
 // add a user to the song's list of users
 void share_song() {
-    int new_md_len, shift;
-    char new_md[256], uid;
+    char uid;
 
     // reject non-owner attempts to share
     load_song_md();
@@ -842,7 +759,7 @@ void share_song() {
 
 // removes DRM data from song for digital out
 void digital_out() {
-    u32 counter = 0, rem, cp_num, length;
+    u32 rem = 0, cp_num, length;
 
 	load_song_md();
 
@@ -853,8 +770,6 @@ void digital_out() {
 		return;
 	}
 
-
-	mb_printf("Verifying header signature \n\r");
 	if( !verify_song_md_hash_signature()){ //This operation uses the Universal Buffer
 		mb_printf("Song File could not be verified \n\r");
 		return;
@@ -862,22 +777,16 @@ void digital_out() {
 
 	// get WAV length
 	length = s.song_md.song_size;
-	mb_printf("Song length = %d", length);
 
 	//Verify song_verify_hash
-	mb_printf("Verify song integrity \n\r");
 	while(c->song_length == 0){} //Wait for Zynq to process hash
 
 	int plus_one = (s.song_md.song_size % CHUNK_SZ) > 0 ? 1:0;
 	int chunked_length = (s.song_md.song_size/CHUNK_SZ + plus_one) * sizeof(song_chunk);
-	if(compare_hashes( (void*)s.song_md.song_verify_hash, (void*)c->song_verify_hash) && (c->song_length==chunked_length)){
-		mb_printf("Song hash computed correctly \n\r");
-	}else{
+	if(!compare_hashes( (void*)s.song_md.song_verify_hash, (void*)c->song_verify_hash) && (c->song_length==chunked_length)){
 		mb_printf("Song hash mismatch. Song file is corrupted \n\r");
 		return;
 	}
-
-
 
 	struct AES_ctx ctx;
 
@@ -916,9 +825,7 @@ void digital_out() {
 
 	int chunk_ct = 0;
 	int number_of_chunks = length%CHUNK_SZ==0 ? length/CHUNK_SZ : length/CHUNK_SZ + 1;
-	int last_chunk_len = length%CHUNK_SZ; //The amount of samples in the last chunk. So we don't play junk at the end of the song
 
-	mb_printf("Number of chunks %d", number_of_chunks);
 	// write entire file to two-block codec fifo
 	// writes to one block while the other is being played
 

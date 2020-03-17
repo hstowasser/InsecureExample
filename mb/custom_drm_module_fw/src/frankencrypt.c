@@ -6,7 +6,7 @@
  */
 #include "frankencrypt.h"
 #include "xparameters.h"
-#include "stdio.h"
+
 //#include "secrets.h"
 
 #define FRANKENCRYPT_BASE XPAR_FRANKENCRYPTCORE_0_BASEADDR
@@ -173,17 +173,9 @@ void read_digest(u8 * digest_buf)
 
 void digest_block(uint8_t * block, uint8_t init)
 {
-	//mb_printf("So confused... \n\r");
-
 	while(!sha256_ready()){ } //Wait for digest to complete
-	//mb_printf("Last Digest Complete \n\r");
-	//set_playing();
-	load_block(block);
-//	mb_printf("What is happening? \n\r");
-//	for( int i = 0; i < 64; i++){
-//		printf("%02x ", block[i]);
-//	}printf("\r\n");
 
+	load_block(block);
 	if(init){
 		sha256_trigger_init();
 	}else{
@@ -194,7 +186,6 @@ void digest_block(uint8_t * block, uint8_t init)
 // data is buffer, datalen is length of data, init = 0 continue hash, init = 1 start new hash
 void sha256_compute_hash(uint8_t * data, uint32_t len, uint8_t init, uint8_t * hash_out)
 {
-	//mb_printf("Compute Hash %d \n\r", len);//Debug
 	Last_Module_Used = USE_SHA;
 
 	uint8_t buffer[64] = {0};
@@ -204,7 +195,6 @@ void sha256_compute_hash(uint8_t * data, uint32_t len, uint8_t init, uint8_t * h
 	int datalen = 0;
 	for (i = 0; i < len; ++i) {
 		buffer[datalen] = data[i];
-		//mb_printf("data[%d] %02x \r\n", i, data[i]);
 		datalen++;
 		if (datalen == 64) {
 			digest_block(buffer, init);
@@ -214,7 +204,6 @@ void sha256_compute_hash(uint8_t * data, uint32_t len, uint8_t init, uint8_t * h
 		}
 	}
 
-	//uint32_t i;
 	i = datalen;
 
 	// Pad whatever data is left in the buffer.
@@ -246,11 +235,7 @@ void sha256_compute_hash(uint8_t * data, uint32_t len, uint8_t init, uint8_t * h
 
 	digest_block(buffer, init);
 
-	read_digest(hash_out); //Reading seems to be stable
-//	for( int i = 0; i < 16; i++){
-//		mb_printf("%02x ", hash_out[i]);
-//	}mb_printf("\r\n");
-	//printf("asdf\r\n");
+	read_digest(hash_out);
 }
 
 
@@ -260,7 +245,6 @@ void sha256_compute_hash(uint8_t * data, uint32_t len, uint8_t init, uint8_t * h
 int rsa_complete()
 {
 	u32 status = Xil_In32(FRANKENCRYPT_STATUS_REGISTER);
-	//printf("RSA Ready %x \n\r", status);
 	return (status & FRANKENCRYPT_RSA_STATUS_MASK) > 0;
 }
 
@@ -277,23 +261,18 @@ void rsa_encrypt(uint8_t * m, uint8_t * key, uint8_t * n,  uint8_t * out)
 	{
 		uint32_t word = (key[i]<<24) | (key[i+1]<<16) | (key[i+2]<<8) | key[i+3];
 		Xil_Out32(FRANKENCRYPT_DATA_REGISTER, word);
-		//Xil_Out32BE(FRANKENCRYPT_DATA_REGISTER, *(u32*)(key + i));
 	}
 	for (int i = 0; i < RSA_KEY_SZ; i+=4)
 	{
 		uint32_t word = (m[i]<<24) | (m[i+1]<<16) | (m[i+2]<<8) | m[i+3];
 		Xil_Out32(FRANKENCRYPT_DATA_REGISTER, word);
-		//Xil_Out32BE(FRANKENCRYPT_DATA_REGISTER, *(u32*)(m + i));
-		//mb_printf("%08x \r\n", word);
 	}
 	for (int i = 0; i < RSA_KEY_SZ; i+=4)
 	{
 		uint32_t word = (n[i]<<24) | (n[i+1]<<16) | (n[i+2]<<8) | n[i+3];
 		Xil_Out32(FRANKENCRYPT_DATA_REGISTER, word);
-//		Xil_Out32BE(FRANKENCRYPT_DATA_REGISTER, *(u32*)(n + i));
 	}
 
-	//rsa_complete();
 	//Trigger RSA
 	Xil_Out32(FRANKENCRYPT_COMMAND_REGISTER, TRIGGER_RSA );
 	//Reset Trigger
@@ -313,16 +292,6 @@ void rsa_encrypt(uint8_t * m, uint8_t * key, uint8_t * n,  uint8_t * out)
 		out[i+2] = out_word >> 8*1;
 		out[i+3] = out_word;
 	}
-
-	////Test output
-//	Xil_Out32(FRANKENCRYPT_ADDRESS_REGISTER, FRANKENCRYPT_ADDRESS_RSA_DATA_OUT); //Setup Address
-//	u32 iout = 0;
-//	for (int i = 0; i < 128; i+=4)
-//	{
-//		iout = Xil_In32(FRANKENCRYPT_DATA_REGISTER);
-//		printf("%04x \n\r", iout);
-//	}
-//	printf("\r\n");
 }
 
 void rsa_begin_verify(uint8_t * m, uint8_t * key, uint8_t * n)
