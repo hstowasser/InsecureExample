@@ -15,7 +15,7 @@
 #include <errno.h>
 #include <linux/gpio.h>
 #include <string.h>
-
+#include <stdint.h>
 
 volatile cmd_channel *c;
 
@@ -354,39 +354,64 @@ int play_song(char *song_name) {
 
 // turns DRM song into original WAV for digital output
 void digital_out(char *song_name) {
-    /*char fname[64];
+    char fname[64];
 
-    // load file into shared buffer
-    if (!load_file(song_name, (void*)&c->song)) {
+    // load song into shared buffer
+    int file_size = load_file(song_name, (void*)&c->song);
+    if (!file_size) {
         mp_printf("Failed to load song!\r\n");
         return;
     }
 
     // drive DRM
     send_command(DIGITAL_OUT);
+
+    c->song_length = 0; //Set song_length to 0
+
+	md5_verify((void*)(&c->song.block_array), file_size - sizeof(c->song.song_header) - sizeof(c->song.shared_user_block) );
+
+
     while (c->drm_state == STOPPED) continue; // wait for DRM to start working
     while (c->drm_state == WORKING) continue; // wait for DRM to dump file
 
     // open digital output file
-    int written = 0, wrote, length = c->song.file_size + 8;
+    int wrote = 0, length = c->song_length;
+    sprintf(fname, "%s.dout", song_name);
     int fd = open(fname, O_WRONLY | O_CREAT | O_TRUNC);
     if (fd == -1){
         mp_printf("Failed to open file! Error = %d\r\n", errno);
         return;
     }
 
-    // write song dump to file
+    int chunk_ct = 0;
+    int number_of_chunks = length%CHUNK_SZ==0 ? length/CHUNK_SZ : length/CHUNK_SZ + 1;
+	int last_chunk_len = length%CHUNK_SZ; //The amount of samples in the last chunk. So we don't play junk at the end of the song
+
+	uint8_t universal_buffer[sizeof(song_chunk)];
+
+
     mp_printf("Writing song to file '%s' (%dB)\r\n", fname, length);
-    while (written < length) {
-        wrote = write(fd, (char *)&c->song + written, length - written);
-        if (wrote == -1) {
-            mp_printf("Error in writing file! Error = %d \r\n", errno);
-            return;
-        }
-        written += wrote;
+    uint8_t * chunk_pointer = (uint8_t*)(&c->song.block_array);
+	song_chunk * current_chunk = (void*)universal_buffer;
+
+    while(number_of_chunks > chunk_ct) {
+		// write song dump to file
+    	memcpy((void*)current_chunk, (void *)(chunk_pointer),(uint32_t)(sizeof(song_chunk)));
+		chunk_pointer += sizeof(song_chunk);
+
+    	if( chunk_ct == number_of_chunks - 1){
+    		wrote = write(fd, (void *)(current_chunk->data), (uint32_t)last_chunk_len); //Plus offset to get us to the data
+    	}else{
+    		wrote = write(fd, (void *)(current_chunk->data), CHUNK_SZ);
+    	}
+		if (wrote == -1) {
+			mp_printf("Error in writing file! Error = %d \r\n", errno);
+			return;
+		}
+		chunk_ct++;
     }
     close(fd);
-    mp_printf("Finished writing file\r\n");*/
+    mp_printf("Finished writing file\r\n");
 }
 
 
