@@ -689,6 +689,7 @@ void play_song() {
         	if(is_truncated){ //Stop playback if song is truncated
         		return;
         	}
+        	memcpy(ctx.Iv, iv, HASH_SZ );//reset iv
         	AES_CBC_decrypt_buffer(&ctx, (void *)(current_chunk), (u32)sizeof(song_chunk));
         }
 
@@ -931,6 +932,7 @@ void digital_out() {
 			if(is_truncated){ //Stop playback if song is truncated
 				return;
 			}
+			memcpy(ctx.Iv, iv, HASH_SZ );//reset iv
 			AES_CBC_decrypt_buffer(&ctx, (void *)(current_chunk), (u32)sizeof(song_chunk));
 		}
 
