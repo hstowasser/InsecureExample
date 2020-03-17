@@ -334,11 +334,11 @@ int play_song(char *song_name) {
             send_command(STOP);
             return -1;
         } else if (!strcmp(cmd, "rw")) {
-            mp_printf("Unsupported feature.\r\n\r\n");
-            print_playback_help();
+			send_command(RW);
+			usleep(200000); // wait for DRM to print
         } else if (!strcmp(cmd, "ff")) {
-            mp_printf("Unsupported feature.\r\n\r\n");
-            print_playback_help();
+			send_command(FF);
+			usleep(200000); // wait for DRM to print
         } else if (!strcmp(cmd, "lyrics")) {
             mp_printf("Unsupported feature.\r\n\r\n");
             print_playback_help();

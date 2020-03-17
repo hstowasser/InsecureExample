@@ -627,7 +627,7 @@ void play_song() {
         is_truncated = 0;
     }
 
-    u8 * chunk_pointer = (u8*)(&c->song.block_array);
+    song_chunk * chunk_pointer; // = (u8*)(&c->song.block_array);
     song_chunk * current_chunk = (void*)universal_buffer;
 
     rem = length;
@@ -659,6 +659,16 @@ void play_song() {
             case STOP:
                 mb_printf("Stopping playback...");
                 return;
+            case FF:
+            	//TODO implement
+            	mb_printf("Fast Forward... \r\n");
+            	chunk_ct += 30;
+            	continue;
+            case RW:
+            	//TODO implement
+            	mb_printf("Rewind... \r\n");
+            	chunk_ct -= 30;
+				continue;
             case RESTART:
                 mb_printf("Restarting song... \r\n");
                 chunk_ct = 0; // reset song counter
@@ -672,9 +682,11 @@ void play_song() {
         cp_num = (rem > CHUNK_SZ) ? CHUNK_SZ : rem;
         offset = (counter++ % 2 == 0) ? 0 : CHUNK_SZ;
 
+
+        chunk_pointer = (song_chunk*)(&c->song.block_array[chunk_ct]); //TODO modify for rr and ff
         //Load chunk into universal_buffer
         memcpy((void*)current_chunk, (void *)(chunk_pointer),(u32)(sizeof(song_chunk)));
-        chunk_pointer += sizeof(song_chunk); //TODO modify for rr and ff
+
 
 
 
