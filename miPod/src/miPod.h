@@ -19,7 +19,7 @@
 #define MAX_USERS 64
 #define USERNAME_SZ 64
 #define MAX_PIN_SZ 64
-#define MAX_SONG_SZ (1<<25)
+#define MAX_SONG_SZ (1<<27)
 
 #define CHUNK_SZ 16000
 #define HASH_SZ 16 // 128 bits. Only using most significant 16 bytes of SHA256
