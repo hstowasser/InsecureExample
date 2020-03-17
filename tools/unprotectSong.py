@@ -56,7 +56,7 @@ class unProtectedSong(object):
         f.close()
 
         length = len(data)
-        remaining = len(data) - HEADER_SZ - SONG_SHARING_HEADER_SZ
+        remaining = len(data) - ENC_CHUNK_SZ # Header is padded to ENC_CHUNK_SZ
 
         #concat_key = self.owner_key+self.common_key
         #aes_key = compute_hash(concat_key)
@@ -87,15 +87,16 @@ class unProtectedSong(object):
         padded_data_length = (int(remaining/CHUNK_SZ) + uneven)*ENC_CHUNK_SZ
 
         print("Padded length: ", remaining)
+        # Header is padded to ENC_CHUNK_SZ
         if SONG_VERIFY_HASH_ALGORITHM == USE_MD5:
             reverified_song_hash = md5(
-                data[HEADER_SZ+SONG_SHARING_HEADER_SZ: length]).digest()[0:SONG_VERIFY_HASH_SZ]
+                data[ENC_CHUNK_SZ: length]).digest()[0:SONG_VERIFY_HASH_SZ]
         elif SONG_VERIFY_HASH_ALGORITHM == USE_SHA1:
             reverified_song_hash = sha1(
-                data[HEADER_SZ+SONG_SHARING_HEADER_SZ: length]).digest()[0:SONG_VERIFY_HASH_SZ]
+                data[ENC_CHUNK_SZ: length]).digest()[0:SONG_VERIFY_HASH_SZ]
         else:
             reverified_song_hash = sha256(
-                data[HEADER_SZ+SONG_SHARING_HEADER_SZ: length]).digest()[0:SONG_VERIFY_HASH_SZ]
+                data[ENC_CHUNK_SZ: length]).digest()[0:SONG_VERIFY_HASH_SZ]
 
         if reverified_song_hash != song_verify_hash[0:len(reverified_song_hash)]:
             print("Song Hash not verified")
@@ -108,7 +109,6 @@ class unProtectedSong(object):
             current = length - remaining
             if(chunk_ct < PREVIEW_CT):
                 # preview
-
                 chunk = self.unprotect_chunk__sample(
                     data[current:(current+ENC_CHUNK_SZ)], self.song_hash, self.public_key)
                 if len(chunk) != CHUNK_SZ:
@@ -173,9 +173,9 @@ class unProtectedSong(object):
 
         if(chunk_hash != re_chunk_hash):
             print("Chunk Mismatch")
-            print(chunk_ct)
-            print(chunk_hash.hex())
-            print(chunk_hash_re.hex())
+            print("chunk_ct", chunk_ct)
+            print("chunk_hash",chunk_hash.hex())
+            print("computed chunk_hash",re_chunk_hash.hex())
 
         chunk_hash_int = int.from_bytes(chunk_hash, byteorder='big', signed=False)
         hash_signature = int.from_bytes(
