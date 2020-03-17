@@ -673,6 +673,9 @@ void play_song() {
 			int chunked_length = (s.song_md.song_size/CHUNK_SZ + plus_one) * sizeof(song_chunk);
 			if(!compare_hashes( (void*)s.song_md.song_verify_hash, (void*)c->song_verify_hash) && (c->song_length==chunked_length)){
 				mb_printf("Song hash mismatch. Song file is corrupted \n\r");
+//				for(int i = 0; i < HASH_SZ; i++){
+//					mb_printf("%02x %02x", s.song_md.song_verify_hash[i], c->song_verify_hash[i]);
+//				}
 				return;
 			}
 			verify_song_hash_flag = 0;

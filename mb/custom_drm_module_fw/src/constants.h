@@ -109,6 +109,7 @@ typedef struct __attribute__((__packed__)) {
 typedef struct __attribute__((__packed__)) {
 	header song_header;
 	shared_users shared_user_block;
+	uint8_t pad[sizeof(song_chunk)-sizeof(header)-sizeof(shared_users)];
 	song_chunk block_array[]; //Data blocks
 } song;
 

@@ -19,7 +19,7 @@
 #define MAX_USERS 64
 #define USERNAME_SZ 64
 #define MAX_PIN_SZ 64
-#define MAX_SONG_SZ (1<<27)
+#define MAX_SONG_SZ  (1<<25)
 
 #define CHUNK_SZ 16000
 #define HASH_SZ 16 // 128 bits. Only using most significant 16 bytes of SHA256
@@ -104,6 +104,7 @@ typedef struct __attribute__((__packed__)) {
 typedef struct __attribute__((__packed__)) {
 	header song_header;
 	shared_users shared_user_block;
+	uint8_t pad[sizeof(song_chunk)-sizeof(header)-sizeof(shared_users)];
 	song_chunk block_array[]; //Data blocks
 } song;
 

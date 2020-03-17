@@ -22,11 +22,13 @@ volatile cmd_channel *c;
 #include <stdio.h>
 #include <memory.h>
 #include <string.h>
-#include "HASH/sha256.h"
-#include "HASH/md5.h"
+
+
+
 
 //////////////////////// UTILITY FUNCTIONS ////////////////////////
-
+//#pragma GCC push_options
+//#pragma GCC optimize ("-O1")
 
 // sends a command to the microblaze using the shared command channel and interrupt
 void send_command(int cmd) {
@@ -239,39 +241,37 @@ void share_song(char *song_name, char *username) {
 }
 
 
-int sha256_verify( char * buf, int len)
+
+uint8_t char_to_hex(char a)
 {
-
-	SHA256_CTX ctx;
-	int pass = 1;
-
-	sha256_init(&ctx);
-	sha256_update(&ctx, (void*)buf, len);
-	sha256_final(&ctx, (void*)c->song_verify_hash);
-	mp_printf("Calculated SONG hash %d \n\r",len);
-	for( int i = 0; i < 32; i++){
-		printf("%02x ", c->song_verify_hash[i]);
+	if( a >= 'a'){
+		return a - 'a' + 10;
+	}else{
+		return a - '0';
 	}
-	printf("\n\r");
-	c->song_length = len;
-
-	return(pass);
 }
 
-int md5_verify( char * buf, int len)
+int md5_verify( char *song_name, int file_size)
 {
+	int length = file_size - sizeof(song_chunk);
+	int number_of_chunks = length/sizeof(song_chunk);
 
-	MD5_CTX ctx;
-	int pass = 1;
+	char cmd_buff[500];
+	sprintf(cmd_buff, "dd bs=16160 skip=1 count=%d if=%s | md5sum", number_of_chunks, song_name); //Have fun. This flag definition is dumb
+	//printf("cmd_buff: %s \n",cmd_buff);
 
-	md5_init(&ctx);
-	md5_update(&ctx, (void*)buf, len);
-	md5_final(&ctx, (void*)c->song_verify_hash);
-	mp_printf("Calculated SONG hash %d \n\r",len);
-	c->song_length = len;
+	char buff[255];
+	FILE* f = popen(cmd_buff,"r");
+	fgets(buff, 255, (FILE*)f);
+	//printf("buff: %s \n",buff);
+	pclose(f);
 
-	return(pass);
+	for ( int i = 0; i < HASH_SZ; i++){
+		c->song_verify_hash[i] = char_to_hex(buff[2*i+1]) | char_to_hex(buff[2*i]) << 4;
+	}
+	return length;
 }
+
 
 // plays a song and enters the playback command loop
 int play_song(char *song_name) {
@@ -284,16 +284,14 @@ int play_song(char *song_name) {
         return 0;
     }
 
-    c->song_length = 0; //Set song_length to 0
 
+
+    c->song_length = 0; //Set song_length to 0
 
     // drive the DRM
     send_command(PLAY);
 
-    md5_verify((void*)(&c->song.block_array), file_size - sizeof(c->song.song_header) - sizeof(c->song.shared_user_block) );
-
-
-    //c->song_length = c->song.song_header.song_size;
+    c->song_length = md5_verify( song_name, file_size);
 
     while (c->drm_state == STOPPED) continue; // wait for DRM to start playing
 
@@ -368,8 +366,8 @@ void digital_out(char *song_name) {
 
     c->song_length = 0; //Set song_length to 0
 
-	md5_verify((void*)(&c->song.block_array), file_size - sizeof(c->song.song_header) - sizeof(c->song.shared_user_block) );
-
+	//md5_verify((void*)(&c->song.block_array), file_size - sizeof(c->song.song_header) - sizeof(c->song.shared_user_block) );
+    c->song_length = md5_verify( song_name, file_size);
 
     while (c->drm_state == STOPPED) continue; // wait for DRM to start working
     while (c->drm_state == WORKING) continue; // wait for DRM to dump file
@@ -479,3 +477,4 @@ int main(int argc, char** argv)
 
     return 0;
 }
+//#pragma GCC pop_options
