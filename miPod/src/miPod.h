@@ -34,7 +34,7 @@
 #define USER_KEY_BOX_SZ RSA_KEY_SZ
 #define NUMBER_OF_SHARED_USERS 64 //64th block not used
 
-#define USE_SHA1_VERIFY
+//#define USE_SHA1_VERIFY
 #ifdef USE_SHA1_VERIFY
 	#define VERIFY_HASH_SZ 20
 #else

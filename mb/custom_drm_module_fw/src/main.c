@@ -562,6 +562,8 @@ void play_song() {
     int number_of_chunks = length%CHUNK_SZ==0 ? length/CHUNK_SZ : length/CHUNK_SZ + 1;
     int last_chunk_len = length%CHUNK_SZ; //The amount of samples in the last chunk. So we don't play junk at the end of the song
 
+    chunk_ct = number_of_chunks - 1; //Check last chunk first
+    uint8_t check_last_chunk_flag = 1;
     // write entire file to two-block codec fifo
     // writes to one block while the other is being played
     set_playing();
@@ -605,7 +607,7 @@ void play_song() {
         offset = (counter++ % 2 == 0) ? 0 : CHUNK_SZ;
 
 
-        chunk_pointer = (song_chunk*)(&c->song.block_array[chunk_ct]); //TODO modify for rr and ff
+        chunk_pointer = (song_chunk*)(&c->song.block_array[chunk_ct]); 
         //Load chunk into universal_buffer
         memcpy((void*)current_chunk, (void *)(chunk_pointer),(u32)(sizeof(song_chunk)));
 
@@ -663,6 +665,12 @@ void play_song() {
 				return;
 			}
 		}
+
+        if( check_last_chunk_flag == 1){
+            check_last_chunk_flag = 0;
+            chunk_ct = 0; //Now go to the start of the song
+            continue; //Don't play last chunk first
+        }
 
 		if( verify_song_hash_flag == 1) //This must only be done once at the beginning of each song
 		{
@@ -829,6 +837,9 @@ void digital_out() {
 	int chunk_ct = 0;
 	int number_of_chunks = length%CHUNK_SZ==0 ? length/CHUNK_SZ : length/CHUNK_SZ + 1;
 
+    uint8_t verify_song_hash_flag = 1; 
+    chunk_ct = number_of_chunks - 1; //Check last chunk first
+
 	// write entire file to two-block codec fifo
 	// writes to one block while the other is being played
 
@@ -838,6 +849,7 @@ void digital_out() {
 		// calculate write size
 		cp_num = (rem > CHUNK_SZ) ? CHUNK_SZ : rem;
 
+        chunk_pointer = (song_chunk*)(&c->song.block_array[chunk_ct]);
 		//Load chunk into universal_buffer
 		memcpy((void*)current_chunk, (void *)(chunk_pointer),(u32)(sizeof(song_chunk)));
 
@@ -882,10 +894,16 @@ void digital_out() {
 			}
 		}
 
+        if( verify_song_hash_flag ){ //If we are doing the "last chunk first" check
+            verify_song_hash_flag = 0;
+            chunk_ct = 0;
+            continue; //Go back to the start of the song
+        }
+
 		//Write unencrypted data backout to song file
 		Xil_MemCpy((void *)chunk_pointer, (void *)(current_chunk),(u32)sizeof(song_chunk));
 
-		chunk_pointer += sizeof(song_chunk);
+		//chunk_pointer += sizeof(song_chunk);
 		rem -= cp_num;
 		chunk_ct+=1;
 	}
