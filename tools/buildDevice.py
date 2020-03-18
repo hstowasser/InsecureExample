@@ -37,7 +37,7 @@ from combineBitstream import combine_bitstream
 build_flags = ["cs", "cp", "gb", "bm", "cb", "all"]
 proj_name = "system_wrapper_hw_platform_0" 
 default_bif = "output.bif"
-input_secrets = "device_secrets"
+input_secrets = "device_secrets.h"
 output_secrets = "secrets.h"
 device_dir = ""
 
@@ -52,6 +52,7 @@ bif_outpath = ""
 # based on use of Vagrant dev box
 vagrant_vivado_path = "/opt/Xilinx/Vivado/2017.4/settings64.sh"
 xsct = "/opt/Xilinx/SDK/2017.4/bin/xsct"
+
 vivado_batch = "vivado -mode batch -source "
 
 def cpy_secrets(device_dir, dev_path_mb):
@@ -114,12 +115,13 @@ def main():
         print("Error... invalid dev_path {%s} provided." % dev_path)
         sys.exit(1)
 
-    dev_path_pl = dev_path + "/pl"
+    dev_path_pl_ = dev_path + "/pl"
+    dev_path_pl = dev_path + "/pl/proj"
     dev_path_mb = dev_path + "/mb"
     dev_path_tools = dev_path + "/tools"
     opt_proj_name = args.proj_name
-    path_to_proj_tcl = dev_path_pl + "/proj/create_project.tcl"
-    path_to_bits_tcl = dev_path_pl + "/proj/gen_bitstream.tcl"
+    path_to_proj_tcl = "create_project.tcl"
+    path_to_bits_tcl = "gen_bitstream.tcl"
     bif_outpath = dev_path_mb + "/BOOT.bin"
     run_dir = os.getcwd()
 
@@ -166,7 +168,7 @@ def main():
             gen_bitstream(dev_path_pl, proj_name, vivado_batch, path_to_bits_tcl)
             path_util(run_dir)
         elif args.build_flag == "bm":
-            if verify_secrets(args.secrets_directory):
+            if verify_secrets(args.secrets_directory):                
                 build_microblaze(xsct, proj_name, dev_path_tools, dev_path, device_dir)
         elif args.build_flag == "cb":
             if verify_secrets(args.secrets_directory):

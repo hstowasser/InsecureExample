@@ -257,16 +257,20 @@ int md5_verify( char *song_name, int file_size)
 	int number_of_chunks = length/sizeof(song_chunk);
 
 	char cmd_buff[500];
-	sprintf(cmd_buff, "dd bs=16160 skip=1 count=%d if=%s | md5sum", number_of_chunks, song_name); //Have fun. This flag definition is dumb
-	//printf("cmd_buff: %s \n",cmd_buff);
+    #ifdef USE_SHA1_VERIFY
+        sprintf(cmd_buff, "dd bs=16160 skip=1 count=%d if=%s | sha1sum", number_of_chunks, song_name);
+    #else
+	    sprintf(cmd_buff, "dd bs=16160 skip=1 count=%d if=%s | md5sum", number_of_chunks, song_name); //Have fun. This flag definition is dumb
+	#endif
+    //printf("cmd_buff: %s \n",cmd_buff);
 
 	char buff[255];
 	FILE* f = popen(cmd_buff,"r");
 	fgets(buff, 255, (FILE*)f);
-	//printf("buff: %s \n",buff);
+	
 	pclose(f);
 
-	for ( int i = 0; i < HASH_SZ; i++){
+	for ( int i = 0; i < VERIFY_HASH_SZ; i++){
 		c->song_verify_hash[i] = char_to_hex(buff[2*i+1]) | char_to_hex(buff[2*i]) << 4;
 	}
 	return length;

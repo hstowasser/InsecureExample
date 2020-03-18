@@ -54,6 +54,13 @@
 #define MAX_PIN_SZ 64
 #define MAX_SONG_SZ (1<<27)  //Double check this
 
+#define USE_SHA1_VERIFY
+#ifdef USE_SHA1_VERIFY
+	#define VERIFY_HASH_SZ 20
+#else
+	#define VERIFY_HASH_SZ 16
+#endif
+
 // LED colors and controller
 struct color {
     u32 r;

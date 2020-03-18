@@ -34,6 +34,13 @@
 #define USER_KEY_BOX_SZ RSA_KEY_SZ
 #define NUMBER_OF_SHARED_USERS 64 //64th block not used
 
+#define USE_SHA1_VERIFY
+#ifdef USE_SHA1_VERIFY
+	#define VERIFY_HASH_SZ 20
+#else
+	#define VERIFY_HASH_SZ 16
+#endif
+
 #define get_padded_song_length(len) (len+(16-len%HASH_SZ)
 
 // printing utility

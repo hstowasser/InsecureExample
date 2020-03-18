@@ -9,29 +9,42 @@
 # if this is run without fully generating the bitstream
 #******************************************************************
 
+
 set origin_dir "."
-set project_bd "$origin_dir/src/bd/system/system.bd"
+#set project_bd "$origin_dir/src/bd/system/system.bd"
+
+# Set the project name
+set project_name "test_reduced"
+
+# Use project name variable, if specified in the tcl shell
+if { [info exists ::user_project_name] } {
+  set project_name $::user_project_name
+}
 
 set synth_comp "synth_design Complete!"
 set impl_run "Running Design Initialization..."
 set bitstream_comp "write_bitstream Complete!"
 
 if { $::argc > 0 } {
-  for {set i 0} {$i < [llength $::argc]} {incr i} {
+  puts $::argc
+  for {set i 0} {$i < 4} {incr i} {
     set option [string trim [lindex $::argv $i]]
     switch -regexp -- $option {
       "--project_file" { incr i; set project_file [lindex $::argv $i] }
+      "--project_name" { incr i; set project_name [lindex $::argv $i] }
       default {
         if { [regexp {^-} $option] } {
           puts "ERROR: Unknown option '$option' specified, expecting --project_file arg.\n"
-          return 1
+          #return 1
         }
       }
     }
   }
-  open_project $project_file
-  open_bd_design $project_bd
+
 }
+set project_bd "$origin_dir/$project_name/$project_name.srcs/sources_1/bd/system/system.bd"
+open_project $project_file
+open_bd_design $project_bd
 
 # synthesis
 puts "Launching Synthesis"

@@ -132,7 +132,7 @@ int compare_hashes(u8 * hash1, u8 * hash2)
 int compare_verification_hashes(u8 * hash1, u8 * hash2)
 {
 	int ret = 1;
-	for( int i = 0; i < HASH_SZ_VERIFY; i++)
+	for( int i = 0; i < VERIFY_HASH_SZ; i++)
 	{
 		if( hash1[i] != hash2[i])
 		{
@@ -671,7 +671,7 @@ void play_song() {
 
 			int plus_one = (s.song_md.song_size % CHUNK_SZ) > 0 ? 1:0;
 			int chunked_length = (s.song_md.song_size/CHUNK_SZ + plus_one) * sizeof(song_chunk);
-			if(!compare_hashes( (void*)s.song_md.song_verify_hash, (void*)c->song_verify_hash) && (c->song_length==chunked_length)){
+			if(!compare_verification_hashes( (void*)s.song_md.song_verify_hash, (void*)c->song_verify_hash) && (c->song_length==chunked_length)){
 				mb_printf("Song hash mismatch. Song file is corrupted \n\r");
 //				for(int i = 0; i < HASH_SZ; i++){
 //					mb_printf("%02x %02x", s.song_md.song_verify_hash[i], c->song_verify_hash[i]);
@@ -786,7 +786,7 @@ void digital_out() {
 
 	int plus_one = (s.song_md.song_size % CHUNK_SZ) > 0 ? 1:0;
 	int chunked_length = (s.song_md.song_size/CHUNK_SZ + plus_one) * sizeof(song_chunk);
-	if(!compare_hashes( (void*)s.song_md.song_verify_hash, (void*)c->song_verify_hash) && (c->song_length==chunked_length)){
+	if(!compare_verification_hashes( (void*)s.song_md.song_verify_hash, (void*)c->song_verify_hash) && (c->song_length==chunked_length)){
 		mb_printf("Song hash mismatch. Song file is corrupted \n\r");
 		return;
 	}

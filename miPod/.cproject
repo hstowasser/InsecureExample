@@ -23,7 +23,7 @@
 								<inputType id="xilinx.gnu.assembler.input.18650550" superClass="xilinx.gnu.assembler.input"/>
 							</tool>
 							<tool id="xilinx.gnu.armv7.linux.c.toolchain.compiler.debug.1482393936" name="ARM v7 Linux gcc compiler" superClass="xilinx.gnu.armv7.linux.c.toolchain.compiler.debug">
-								<option defaultValue="gnu.c.optimization.level.none" id="xilinx.gnu.compiler.option.optimization.level.1763449947" name="Optimization Level" superClass="xilinx.gnu.compiler.option.optimization.level" valueType="enumerated"/>
+								<option defaultValue="gnu.c.optimization.level.none" id="xilinx.gnu.compiler.option.optimization.level.1763449947" name="Optimization Level" superClass="xilinx.gnu.compiler.option.optimization.level" value="gnu.c.optimization.level.most" valueType="enumerated"/>
 								<option id="xilinx.gnu.compiler.option.debugging.level.1769902905" name="Debug Level" superClass="xilinx.gnu.compiler.option.debugging.level" value="gnu.c.debugging.level.max" valueType="enumerated"/>
 								<inputType id="xilinx.gnu.armv7.linux.c.compiler.input.2087727726" name="C source files" superClass="xilinx.gnu.armv7.linux.c.compiler.input"/>
 							</tool>

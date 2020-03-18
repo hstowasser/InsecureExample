@@ -14,7 +14,6 @@ from shutil import copy2
 
 def output_helper(dev_path, device_dir):
     """ A helper that handles mb build output, including saving old mipod copies """
-
     mi_path = dev_path + "/miPod/Debug/"
     inter_path = dev_path + "/mb/miPod/Debug/miPod.elf"
     mipod_elf = mi_path + "miPod.elf"
