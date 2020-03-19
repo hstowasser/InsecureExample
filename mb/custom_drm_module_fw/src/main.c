@@ -241,7 +241,7 @@ void query_player() {
     }
 
     for (int i = 0; i < NUM_PROVISIONED_USERS; i++) {
-        strcpy((char *)q_user_lookup(c->query, i), USERNAMES[i]);
+        strcpy((char *)q_user_lookup(c->query, i), USERNAMES[PROVISIONED_UIDS[i]]);
     }
 
     mb_printf("Queried player (%d regions, %d users)\r\n", c->query.num_regions, c->query.num_users);
