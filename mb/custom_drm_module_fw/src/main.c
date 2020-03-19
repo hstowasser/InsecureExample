@@ -115,6 +115,17 @@ void myISR(void) {
 
 //////////////////////// HELPER FUNCTIONS  ////////////////////////
 
+int uid_to_index(u8 uid)
+{
+	for( int i = 0; i < NUM_PROVISIONED_USERS; i++){
+		if( uid == PROVISIONED_UIDS[i] ){
+			return i;
+		}
+	}
+	mb_printf("Error looking up UID");
+	return -1;
+}
+
 //returns true if they are the same
 int compare_hashes(u8 * hash1, u8 * hash2)
 {
@@ -192,7 +203,7 @@ void login() {
                     memcpy(user_key_block, hash_buffer, HASH_SZ); // Copy user key into user_key_block
 
                     //Decrypt private key
-                    memcpy(user_rsa_private_key_block, PROVISIONED_USER_PRIVATE_KEY_D_BLOCKS[s.uid], RSA_KEY_SZ);
+                    memcpy(user_rsa_private_key_block, PROVISIONED_USER_PRIVATE_KEY_D_BLOCKS[uid_to_index(s.uid)], RSA_KEY_SZ);
                     AES_init_ctx_iv(&ctx, user_key_block, iv);
                     AES_CBC_decrypt_buffer(&ctx, user_rsa_private_key_block, RSA_KEY_SZ);
                     return;
@@ -527,7 +538,7 @@ void play_song() {
         //Compute song key by concating user key and song hash. Then hashing. Then concating the output with the common key. And hashing again.
         if( is_shared_user_flag == 1){
         	//If the song is being played by a shared user, decrypt the concat song key
-        	rsa_encrypt((void*)c->song.shared_user_block.user_key_blocks[s.uid], (void*)user_rsa_private_key_block, (void*)PROVISIONED_USER_PUBLIC_KEY_N_BLOCKS[(uint8_t)s.uid],  rsa_output_buffer);
+        	rsa_encrypt((void*)c->song.shared_user_block.user_key_blocks[s.uid], (void*)user_rsa_private_key_block, (void*)PROVISIONED_USER_PUBLIC_KEY_N_BLOCKS[(uint8_t)uid_to_index(s.uid)],  rsa_output_buffer);
         	memcpy(hash_buffer, rsa_output_buffer+RSA_KEY_SZ-HASH_SZ, HASH_SZ); // Copy the decrypted result into the hash_buffer
         }else{
         	//If the song is being played by the owner, generate the concat song key
@@ -752,7 +763,7 @@ void share_song() {
 	sha256_compute_hash((void*)universal_buffer , HASH_SZ*2 , 1, hash_buffer); // The first 16 bytes is the concat song key
 
 	//Get new users public key
-	uint8_t * new_use_public_key = (void*)PROVISIONED_USER_PUBLIC_KEY_N_BLOCKS[(uint8_t)uid];
+	uint8_t * new_use_public_key = (void*)PROVISIONED_USER_PUBLIC_KEY_N_BLOCKS[(uint8_t)uid_to_index(uid)];
 
     //Encrypt song key using new users public key
 	memset(rsa_output_buffer, 0, RSA_KEY_SZ);
@@ -815,7 +826,7 @@ void digital_out() {
 		//Compute song key by concating user key and song hash. Then hashing. Then concating the output with the common key. And hashing again.
 		if( is_shared_user_flag == 1){
 			//If the song is being played by a shared user, decrypt the concat song key
-			rsa_encrypt((void*)c->song.shared_user_block.user_key_blocks[s.uid], (void*)user_rsa_private_key_block, (void*)PROVISIONED_USER_PUBLIC_KEY_N_BLOCKS[(uint8_t)s.uid],  rsa_output_buffer);
+			rsa_encrypt((void*)c->song.shared_user_block.user_key_blocks[s.uid], (void*)user_rsa_private_key_block, (void*)PROVISIONED_USER_PUBLIC_KEY_N_BLOCKS[(uint8_t)uid_to_index(s.uid)],  rsa_output_buffer);
 			memcpy(hash_buffer, rsa_output_buffer+RSA_KEY_SZ-HASH_SZ, HASH_SZ); // Copy the decrypted result into the hash_buffer
 		}else{
 			//If the song is being played by the owner, generate the concat song key
