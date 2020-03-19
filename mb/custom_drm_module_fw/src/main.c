@@ -562,7 +562,12 @@ void play_song() {
     int number_of_chunks = length%CHUNK_SZ==0 ? length/CHUNK_SZ : length/CHUNK_SZ + 1;
     int last_chunk_len = length%CHUNK_SZ; //The amount of samples in the last chunk. So we don't play junk at the end of the song
 
-    chunk_ct = number_of_chunks - 1; //Check last chunk first
+    if ( is_truncated){ //Check last chunk first
+        chunk_ct = PREVIEW_CHUNK_CT - 1;
+    }else{
+        chunk_ct = number_of_chunks - 1; 
+    }
+    
     uint8_t check_last_chunk_flag = 1;
     // write entire file to two-block codec fifo
     // writes to one block while the other is being played
@@ -667,6 +672,14 @@ void play_song() {
 		}
 
         if( check_last_chunk_flag == 1){
+            if(chunk_ct >= PREVIEW_CHUNK_CT) //Check the signature of the last chunk
+            {
+                rsa_begin_verify( (void*)current_chunk->chunk_hash_signature, (void*)GLOBAL_PUBLIC_E, (void*)GLOBAL_PUBLIC_N);
+                if( !verify_song_hash_signature( chunk_hash_buffer)){
+				    print("Chunk signature verification failed \r\n");
+				    return;
+			    }
+            }
             check_last_chunk_flag = 0;
             chunk_ct = 0; //Now go to the start of the song
             continue; //Don't play last chunk first
@@ -838,7 +851,11 @@ void digital_out() {
 	int number_of_chunks = length%CHUNK_SZ==0 ? length/CHUNK_SZ : length/CHUNK_SZ + 1;
 
     uint8_t verify_song_hash_flag = 1; 
-    chunk_ct = number_of_chunks - 1; //Check last chunk first
+    if ( is_truncated){ //Check last chunk first
+        chunk_ct = PREVIEW_CHUNK_CT - 1;
+    }else{
+        chunk_ct = number_of_chunks - 1; 
+    }
 
 	// write entire file to two-block codec fifo
 	// writes to one block while the other is being played
@@ -894,7 +911,16 @@ void digital_out() {
 			}
 		}
 
+
         if( verify_song_hash_flag ){ //If we are doing the "last chunk first" check
+            if(chunk_ct >= PREVIEW_CHUNK_CT) //Check the signature of the last chunk even if it is encrypted
+            {
+                rsa_begin_verify( (void*)current_chunk->chunk_hash_signature, (void*)GLOBAL_PUBLIC_E, (void*)GLOBAL_PUBLIC_N);
+                if( !verify_song_hash_signature( chunk_hash_buffer)){
+				    print("Chunk signature verification failed \r\n");
+				    return;
+			    }
+            }
             verify_song_hash_flag = 0;
             chunk_ct = 0;
             continue; //Go back to the start of the song
