@@ -1,4 +1,4 @@
-DEBUG = True
+DEBUG = False
 
 NUM_REGIONS = 32
 NUM_USERS = 64

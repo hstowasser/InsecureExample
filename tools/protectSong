@@ -106,14 +106,6 @@ def create_header(regions, user, user_secret_location, region_info, song_size, s
         print("song_hash", len(song_hash))
         print("header_hash", len(header_hash))
         print("hash_signature", len(sig))
-    debug = True
-    if(debug):
-        print("Owner Id", ownerID)
-        print("song_size", song_size)
-        print("song_verify_hash", song_verify_hash.hex())
-        print("song_hash", song_hash.hex())
-        print("header_hash", len(header_hash))
-        print("song_signature", sig.hex())
 
     return metadata
 
@@ -225,16 +217,16 @@ class ProtectedSong(object):
         # handle last chunk
         current = length - remaining
         last_chunk = bytearray(full_song_bytes[current:(current+remaining)])
-        print("Chunk SZ", len(last_chunk))
+        #print("Chunk SZ", len(last_chunk))
 
         while(len(last_chunk) < CHUNK_SZ):  # Pad last chunk
             last_chunk.append((randint(0, 255)))
 
         last_chunk = bytes(last_chunk)
-        print("Chunk SZ", len(last_chunk))
+        #print("Chunk SZ", len(last_chunk))
         if remaining > 0:
             chunk = self.protect_chunk__encrypt(chunk_ct, bytes(
-                last_chunk), self.song_hash, CHUNK_SZ, aes_obj)
+                last_chunk), self.song_hash, CHUNK_SZ, aes_obj, self.private_key)
 
         for i in range(0, len(chunk), 2):
             protected_wav_val = struct.pack('<BB', chunk[i], chunk[i+1])
@@ -243,7 +235,7 @@ class ProtectedSong(object):
 
         protected_wav = open(os.path.abspath(file_location), "wb")
         # TODO Add song_verify_hash to metadata
-        print("out_buffer length: ", len(out_buffer))
+        #print("out_buffer length: ", len(out_buffer))
         if SONG_VERIFY_HASH_ALGORITHM == USE_MD5:
             song_verify_hash = md5(out_buffer).digest()[0:SONG_VERIFY_HASH_SZ]
         elif SONG_VERIFY_HASH_ALGORITHM == USE_SHA1:
@@ -251,7 +243,7 @@ class ProtectedSong(object):
         else:
             song_verify_hash = sha256(out_buffer).digest()[
                 0:SONG_VERIFY_HASH_SZ]
-        print(song_verify_hash.hex())
+        #print(song_verify_hash.hex())
         metadata = create_header(self.region_list, self.owner, self.user_secrets_path, self.region_secrets_path,
                                  length, self.song_hash, self.private_key, self.common_key, song_verify_hash)
         
@@ -261,8 +253,8 @@ class ProtectedSong(object):
         song_sharing_header = bytearray(song_sharing_header)
         for i in range(0, SONG_SHARING_HEADER_SZ):
             song_sharing_header.append(0)
-        print(len(song_sharing_header))
-        print(SONG_SHARING_HEADER_SZ)
+        #print(len(song_sharing_header))
+        #print(SONG_SHARING_HEADER_SZ)
 
         
 
@@ -271,7 +263,7 @@ class ProtectedSong(object):
         #pad header to a multiple of ENC_CHUNK_SZ
         while(len(song_sharing_header)+len(metadata) < ENC_CHUNK_SZ):
             song_sharing_header.append(0)
-        print(len(song_sharing_header))
+        #print(len(song_sharing_header))
 
         protected_wav.write(bytes(song_sharing_header))
 
@@ -314,8 +306,7 @@ class ProtectedSong(object):
         hash = int.from_bytes(chunk_hash, byteorder='big')
         song_hash_signature = pow(hash, private_key[1], private_key[0])
 
-        if(chunk_ct == 0):
-            print("Signature verification failed")
+        if(DEBUG):
             print('count ', chunk_ct)
             print('d= ', private_key[1])
             print()
@@ -325,7 +316,6 @@ class ProtectedSong(object):
             print()
             print('hash= ', hash)
             print('hash hex= ', chunk_hash.hex())
-        # exit()
 
         song_hash_signature = song_hash_signature.to_bytes(
             RSA_KEY_SZ, byteorder='big')  # TODO Should 256 be replaced with RSA_KEY_SZ?
@@ -371,7 +361,7 @@ class ProtectedSong(object):
         song_hash_signature = song_hash_signature.to_bytes(
             RSA_KEY_SZ, byteorder='big')  # TODO Should 256 be replaced with RSA_KEY_SZ?
 
-        chunk = struct.pack('=I{pad_sz}x{chunk_sz}s{chunk_hash}s{song_hash_signature}x'.format(
+        chunk = struct.pack('=I{pad_sz}x{chunk_sz}s{chunk_hash}s{song_hash_signature}s'.format(
             pad_sz=PAD_SZ,
             chunk_sz=CHUNK_SZ,
             chunk_hash=HASH_SZ,
@@ -379,8 +369,8 @@ class ProtectedSong(object):
             chunk_ct,
             song_chunk,
             chunk_hash,
-            song_hash_signature
-        )
+            song_hash_signature)
+
         IV = binascii.unhexlify('000102030405060708090a0b0c0d0e0f')
         aes_obj = AES.new(self.aes_key, AES.MODE_CBC, IV)
         enc = aes_obj.encrypt(chunk)
