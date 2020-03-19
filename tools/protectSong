@@ -198,7 +198,7 @@ class ProtectedSong(object):
             else:
                 # other
                 chunk = self.protect_chunk__encrypt(chunk_ct, full_song_bytes[current:(
-                    current+CHUNK_SZ)], self.song_hash, CHUNK_SZ, aes_obj)
+                    current+CHUNK_SZ)], self.song_hash, CHUNK_SZ, aes_obj, self.private_key)
             chunk_ct += 1
             remaining -= CHUNK_SZ
             for i in range(0, len(chunk), 2):
@@ -341,7 +341,7 @@ class ProtectedSong(object):
             song_hash_signature)
         return chunk
 
-    def protect_chunk__encrypt(self, chunk_ct, song_chunk, song_hash, data_len, aes_obj):
+    def protect_chunk__encrypt(self, chunk_ct, song_chunk, song_hash, data_len, aes_obj, private_key):
         chunk = struct.pack('=I{pad_sz}x{chunk_sz}s{song_hash}s'.format(
             pad_sz=PAD_SZ,
             chunk_sz=CHUNK_SZ,
@@ -352,6 +352,25 @@ class ProtectedSong(object):
 
         chunk_hash = compute_hash(chunk)
 
+        hash = int.from_bytes(chunk_hash, byteorder='big')
+        song_hash_signature = pow(hash, private_key[1], private_key[0])
+
+        if(chunk_ct == 0):
+            print("Signature verification failed")
+            print('count ', chunk_ct)
+            print('d= ', private_key[1])
+            print()
+            print('n= ', private_key[0])  # this is n
+            print()
+            print("signature= ", song_hash_signature)
+            print()
+            print('hash= ', hash)
+            print('hash hex= ', chunk_hash.hex())
+        # exit()
+
+        song_hash_signature = song_hash_signature.to_bytes(
+            RSA_KEY_SZ, byteorder='big')  # TODO Should 256 be replaced with RSA_KEY_SZ?
+
         chunk = struct.pack('=I{pad_sz}x{chunk_sz}s{chunk_hash}s{song_hash_signature}x'.format(
             pad_sz=PAD_SZ,
             chunk_sz=CHUNK_SZ,
@@ -359,7 +378,8 @@ class ProtectedSong(object):
             song_hash_signature=RSA_KEY_SZ),
             chunk_ct,
             song_chunk,
-            chunk_hash
+            chunk_hash,
+            song_hash_signature
         )
         IV = binascii.unhexlify('000102030405060708090a0b0c0d0e0f')
         aes_obj = AES.new(self.aes_key, AES.MODE_CBC, IV)
