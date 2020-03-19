@@ -447,16 +447,6 @@ void query_song() {
     // load song
     load_song_md();
 
-    //TODO For some reason the first time that query is called verify song md hash fails. This causes miPod to pring gibberish
-//    if( !verify_song_md_hash()){
-//    	mb_printf("Unrecognized Song File /n/r");
-//    	return;
-//    }
-//
-//    if( !verify_song_md_hash_signature()){
-//    	mb_printf("Song File could not be verified /n/r");
-//    	return;
-//    }
     memset((void *)&c->query, 0, sizeof(query));
 
     int enabled_region_bits = s.song_md.enabled_regions.regions;
@@ -480,7 +470,7 @@ void query_song() {
 
 
     uint64_t enabled_user_bits = s.song_shared_user_md.enabled_users;
-    mb_printf("enabled users %d \n\r", enabled_user_bits);
+
     int user_count = 0;
 	for( int i = 0; i < 63; i++)
 	{
@@ -491,7 +481,7 @@ void query_song() {
 		}
 		enabled_user_bits >>= 1;
 	}
-	c->query.num_users = user_count; //TODO Test implement sharing
+	c->query.num_users = user_count;
 
    mb_printf("Queried song (%d regions, %d users)\r\n", c->query.num_regions, c->query.num_users);
 }
