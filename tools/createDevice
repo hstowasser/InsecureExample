@@ -24,46 +24,43 @@ def format_hex_to_c_byte_array( hex_string):
 # these blocks will be used to verify the users login
 def generate_user_blocks(user_names, user_secrets, device_hash):
     user_block_list = []
-    for u in user_secrets:
-        enabled = False
-        user_name = ''
-        for enabled_user in user_names:
-            if u == enabled_user:
-                enabled = True
-                user_name = enabled_user
-                break
-        if enabled:
-            user_key = binascii.unhexlify(user_secrets[user_name]['pin_hash'])[0:HASH_SZ]
-            aes_encryptor = AES.new(user_key, AES.MODE_ECB)
-            user_block = aes_encryptor.encrypt(device_hash).hex()
-        else:
-            user_block = ''
-            while len(user_block) < RSA_KEY_SZ:
-                user_block += '0' 
-
-        formatted_user_block = format_hex_to_c_byte_array(user_block)
-        user_block_list.append(formatted_user_block)
+    for u in user_names:
+        user_key = binascii.unhexlify(user_secrets[u]['pin_hash'])[0:HASH_SZ]
+        aes_encryptor = AES.new(user_key, AES.MODE_ECB)
+        user_block = aes_encryptor.encrypt(device_hash).hex()
+        
+        #now make it look like a C byte array
+        formatted_string = " {"
+        i = 0
+        for i in range(0,len(user_block),2): 
+            if(i != 0):
+                formatted_string += ', '
+            formatted_string += '0x' + user_block[i:i+2]
+        formatted_string += " } \n"
+        user_block_list.append(formatted_string)
     return user_block_list
 
 def generate_user_public_key_blocks(user_names, user_secrets):
     user_block_list = []
-    for u in user_secrets:
-        enabled = False
-        user_name = ''
-        for enabled_user in user_names:
-            if u == enabled_user:
-                enabled = True
-                user_name = enabled_user
-                break
-        if enabled:
-            user_public_key = user_secrets[user_name]['rsa_key_n']
-        else:
-            user_public_key = ''
-            while len(user_public_key) < RSA_KEY_SZ:
-                user_public_key += '0' 
+    for u in user_names:
+        user_public_key = user_secrets[u]['rsa_key_n']
         
         #now make it look like a C byte array
         formatted_string = format_hex_to_c_byte_array(user_public_key)
+        user_block_list.append(formatted_string)
+    return user_block_list
+
+def generate_user_private_key_blocks(user_names, user_secrets):
+    user_block_list = []
+    for u in user_names:
+        user_private_key = binascii.unhexlify(user_secrets[u]['rsa_key_d'])
+        user_aes_key = binascii.unhexlify(user_secrets[u]['pin_hash'])[0:HASH_SZ]
+        IV = binascii.unhexlify('000102030405060708090a0b0c0d0e0f')
+        aes_encryptor = AES.new(user_aes_key, AES.MODE_CBC, IV)
+        user_private_key_block = aes_encryptor.encrypt(user_private_key).hex()
+        
+        #now make it look like a C byte array
+        formatted_string = format_hex_to_c_byte_array(user_private_key_block)
         user_block_list.append(formatted_string)
     return user_block_list
 
@@ -90,33 +87,6 @@ def generate_region_key_blocks(region_names, region_secrets):
         formatted_string += " } \n"
         region_block_list.append(formatted_string)
     return region_block_list
-
-def generate_user_private_key_blocks(user_names, user_secrets):
-    user_block_list = []
-    for u in user_secrets:
-        enabled = False
-        user_name = ''
-        for enabled_user in user_names:
-            if u == enabled_user:
-                enabled = True
-                user_name = enabled_user
-                break
-
-        if enabled:
-            user_private_key = binascii.unhexlify(user_secrets[user_name]['rsa_key_d'])
-            user_aes_key = binascii.unhexlify(user_secrets[user_name]['pin_hash'])[0:HASH_SZ]
-            IV = binascii.unhexlify('000102030405060708090a0b0c0d0e0f')
-            aes_encryptor = AES.new(user_aes_key, AES.MODE_CBC, IV)
-            user_private_key_block = aes_encryptor.encrypt(user_private_key).hex()
-        else:
-            user_private_key_block = ''
-            while len(user_private_key_block) < RSA_KEY_SZ:
-                user_private_key_block += '0' 
-        
-        #now make it look like a C byte array
-        formatted_string = format_hex_to_c_byte_array(user_private_key_block)
-        user_block_list.append(formatted_string)
-    return user_block_list
 
 
 def main(region_names, user_names, user_secrets, region_secrets, device_dir, device_hash):
