@@ -41,7 +41,7 @@ if { [info exists ::origin_dir_loc] } {
   set origin_dir $::origin_dir_loc
 }
 
-set_param board.repoPaths [list "/vagrant/vivado-boards/new/board_files"]
+set_param board.repoPaths [list "$origin_dir/../../vivado-boards/new/board_files"]
 
 # Set the project name
 set project_name "test"
@@ -117,7 +117,7 @@ set_property -name "board_part" -value "digilentinc.com:cora-z7-07s:part0:1.0" -
 set_property -name "default_lib" -value "xil_defaultlib" -objects $obj
 set_property -name "dsa.num_compute_units" -value "60" -objects $obj
 set_property -name "ip_cache_permissions" -value "read write" -objects $obj
-set_property -name "ip_output_repo" -value "/vagrant/pl/repo/cache" -objects $obj
+set_property -name "ip_output_repo" -value "$origin_dir/../../pl/repo/cache" -objects $obj
 set_property -name "sim.ip.auto_export_scripts" -value "1" -objects $obj
 set_property -name "simulator_language" -value "Mixed" -objects $obj
 set_property -name "target_language" -value "VHDL" -objects $obj
@@ -198,7 +198,7 @@ set_property -name "top" -value "system_wrapper" -objects $obj
 
 # Adding sources referenced in BDs, if not already added
 if { [get_files i2s_output.vhd] == "" } {
-  import_files -quiet -fileset sources_1 /vagrant/pl/src/hdl/i2s_output.vhd
+  import_files -quiet -fileset sources_1 /$origin_dir/../../pl/src/hdl/i2s_output.vhd
 }
 
 
